@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Báo Cáo Nghiên Cứu Chuyên Sâu Kiến Trúc NoSQL</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+    }
+    .chart-container {
+      position: relative;
+      width: 100%;
+      max-width: 650px;
+      margin-left: auto;
+      margin-right: auto;
+      height: 320px;
+      max-height: 400px;
+    }
+    @media (min-width: 768px) {
+      .chart-container {
+        height: 360px;
+      }
+    }
+    .tab-active {
+      border-bottom: 3px solid #2563eb;
+      color: #2563eb;
+      font-weight: 600;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<!-- Chosen Palette: Warm Neutral & Deep Slate with Tech Blue/Emerald Accents (Light slate bg #f8fafc, primary slate #0f172a, tech blue #2563eb, emerald #059669) -->
+<!-- Application Structure Plan: Designed as an Interactive Technical Knowledge Base & Decision Platform. Rather than linear text, it's organized into 6 interactive modules: 1. Theoretical Framework (PACELC, CAP & Algorithms), 2. Storage Engines & Amplification (Interactive Chart.js for WA/RA/SA), 3. NoSQL Deep Dive (Interactive Tabs for Wide-Column, Document, Key-Value, Graph, Multi-Model with WiredTiger Eviction Simulator), 4. Interactive Matrix & System Explorer (Filterable comparison table), 5. Interactive Decision Engine (Wizard quiz for selecting DB), 6. Operations, TCO & Best Practices (Interactive TCO calculator & Best Practices guide). This empowers architects to both learn mechanics and evaluate real-world trade-offs. -->
+<!-- Visualization & Content Choices: 
+    1. PACELC Quadrants -> Interactive Grid + Canvas Scatter/Quadrant Plot (Chart.js) -> User clicks quadrant to highlight databases -> Visualizes theoretical trade-offs -> Chart.js Canvas.
+    2. Storage Amplification -> Interactive Grouped Bar Chart (Chart.js) -> User toggles engine type -> Visualizes WA, RA, SA metrics -> Chart.js Canvas.
+    3. Memory & Eviction Visualizer -> Dynamic State Gauge / Slider (HTML/CSS + Vanilla JS) -> User changes dirty cache % -> Updates UI latency gauge & P99 warning -> Custom Tailwind UI + JS.
+    4. Interactive Matrix -> Searchable, Filterable Data Table (HTML/CSS + Vanilla JS) -> Filter by model, PACELC, latency -> Allows granular inspection -> Tailwind Table + JS.
+    5. Interactive Decision Engine -> Multi-step Quiz (Vanilla JS) -> Dynamic scoring based on report criteria -> Outputs ideal NoSQL engine -> Dynamic DOM manipulation.
+    6. TCO Calculator -> Sliders + Dynamic Bar Chart (Chart.js) -> Inputs data size (GB) -> Calculates DRAM vs HMA cost -> Canvas Chart.js.
+    Confirming NO SVG graphics, NO Mermaid JS. -->
+<body class="bg-slate-50 text-slate-900 antialiased leading-relaxed min-h-screen flex flex-col">
+
+  <!-- Navigation Bar -->
+  <header class="bg-slate-900 text-white sticky top-0 z-50 shadow-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center h-auto md:h-16 py-3 md:py-0">
+      <div class="flex items-center space-x-3 mb-2 md:mb-0">
+        <span class="bg-blue-600 text-white text-xs font-extrabold px-2.5 py-1 rounded tracking-wide uppercase">NoSQL Spec</span>
+        <h1 class="text-lg font-bold tracking-tight">Nghiên Cứu Kiến Trúc NoSQL</h1>
+      </div>
+      <nav class="flex flex-wrap justify-center gap-1 md:gap-2 text-xs md:text-sm">
+        <a href="#theory" class="px-3 py-1.5 rounded hover:bg-slate-800 transition text-slate-300 hover:text-white">Triết Lý & PACELC</a>
+        <a href="#storage" class="px-3 py-1.5 rounded hover:bg-slate-800 transition text-slate-300 hover:text-white">Storage Engines</a>
+        <a href="#deepdive" class="px-3 py-1.5 rounded hover:bg-slate-800 transition text-slate-300 hover:text-white">Các Họ NoSQL</a>
+        <a href="#matrix" class="px-3 py-1.5 rounded hover:bg-slate-800 transition text-slate-300 hover:text-white">Ma Trận So Sánh</a>
+        <a href="#decision" class="px-3 py-1.5 rounded hover:bg-slate-800 transition text-slate-300 hover:text-white bg-blue-700/60 font-semibold">Trợ Lý Lựa Chọn</a>
+        <a href="#ops" class="px-3 py-1.5 rounded hover:bg-slate-800 transition text-slate-300 hover:text-white">TCO & Best Practices</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="bg-gradient-to-b from-slate-900 to-slate-800 text-white py-10 px-4 sm:px-6 lg:px-8 border-b border-slate-700">
+    <div class="max-w-7xl mx-auto">
+      <div class="md:w-3/4">
+        <span class="text-blue-400 font-semibold text-xs uppercase tracking-widest">Báo Cáo Nghiên Cứu Chuyên Sâu</span>
+        <h2 class="text-2xl sm:text-3xl font-extrabold mt-1 tracking-tight text-slate-100">
+          Kiến Trúc Cơ Sở Dữ Liệu NoSQL: Triết Lý Thiết Kế, Cơ Chế Lưu Trữ & Khung Quyết Định
+        </h2>
+        <p class="mt-3 text-slate-300 text-sm md:text-base leading-relaxed">
+          Nghiên cứu đánh đổi vật lý ở tầng lưu trữ đĩa (WA/RA/SA), đồng thuận phân tán (PACELC, Accord), cấu trúc dữ liệu nội tại (LSM-Tree, B-Tree, HMA, Index-Free Adjacency) và kinh tế học hạ tầng nhằm xây dựng khung quyết định lựa chọn NoSQL tối ưu cho bài toán quy mô lớn.
+        </p>
+      </div>
+      <!-- Quick Stats -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8 pt-6 border-t border-slate-700/60 text-center md:text-left">
+        <div>
+          <span class="block text-xl md:text-2xl font-bold text-blue-400">4 Họ Cơ Bản</span>
+          <span class="text-xs text-slate-400">Wide-Column, Document, KV, Graph</span>
+        </div>
+        <div>
+          <span class="block text-xl md:text-2xl font-bold text-emerald-400">4 Cấu Trúc Đĩa</span>
+          <span class="text-xs text-slate-400">LSM-Tree, B-Tree, HMA, Native Graph</span>
+        </div>
+        <div>
+          <span class="block text-xl md:text-2xl font-bold text-amber-400">1 Network Hop</span>
+          <span class="text-xs text-slate-400">Đồng thuận Accord (Strict Serializability)</span>
+        </div>
+        <div>
+          <span class="block text-xl md:text-2xl font-bold text-indigo-400">9.5x Tiết Kiệm</span>
+          <span class="text-xs text-slate-400">HMA NVMe vs DRAM ở quy mô Terabyte</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Content Container -->
+  <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12 w-full">
+
+    <!-- SECTION 1: TRIẾT LÝ VÀ KHUNG LÝ THUYẾT (PACELC & ALGORITHMS) -->
+    <section id="theory" class="scroll-mt-20">
+      <div class="border-l-4 border-blue-600 pl-4 mb-6">
+        <h3 class="text-xl font-bold text-slate-900">1. Triết Lý Thiết Kế & Mô Hình PACELC</h3>
+        <p class="text-xs md:text-sm text-slate-600">
+          Chuyển đổi từ mô hình ACID cứng nhắc sang đánh đổi linh hoạt giữa Tính Nhất Quán (Consistency), Tính Sẵn Sàng (Availability) và Độ Trễ (Latency) theo nguyên lý PACELC.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <!-- Interactive Quadrant Canvas Box -->
+        <div class="lg:col-span-7 bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+          <div class="flex justify-between items-center mb-3">
+            <h4 class="font-bold text-sm text-slate-800">Ma Trận Phân Loại PACELC của các Hệ Thống NoSQL</h4>
+            <span class="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">Rê chuột/Click vào điểm để xem</span>
+          </div>
+          <div class="chart-container">
+            <canvas id="pacelcChart"></canvas>
+          </div>
+          <p class="text-xs text-slate-500 mt-2 italic text-center">
+            * PACELC: Nếu có Partition (P) -> Đánh đổi Availability (A) vs Consistency (C); Else (E) -> Đánh đổi Latency (L) vs Consistency (C).
+          </p>
+        </div>
+
+        <!-- Explanatory Details Box -->
+        <div class="lg:col-span-5 bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+          <h4 class="font-bold text-slate-800 text-base border-b pb-2">Bốn Nhóm Kiến Trúc Cốt Lõi</h4>
+
+          <div id="pacelc-detail-card" class="bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs space-y-2">
+            <div class="font-semibold text-blue-700 text-sm" id="pacelc-title">Nhóm PA/EL (Tối ưu Khả dụng & Độ trễ)</div>
+            <p id="pacelc-desc" class="text-slate-700 leading-normal">
+              Khi sự cố mạng (P), ưu tiên Khả dụng (A); Khi vận hành bình thường (E), ưu tiên Độ trễ thấp (L).
+            </p>
+            <div class="pt-1 text-slate-600">
+              <strong>Hệ thống tiêu biểu:</strong> <span id="pacelc-systems" class="font-mono text-blue-900">Apache Cassandra, ScyllaDB, Amazon DynamoDB, Riak</span>
+            </div>
+            <div class="text-slate-500 italic">
+              * Mẹo: Click vào bất kỳ nhóm nào bên dưới hoặc các nút trên biểu đồ để xem chi tiết.
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <button onclick="updatePacelcDetail('PA/EL')" class="p-2 text-left border rounded hover:bg-blue-50 hover:border-blue-300 transition">
+              <span class="font-bold text-blue-600 block">PA/EL</span>
+              <span class="text-slate-500 text-[11px]">Cassandra, DynamoDB</span>
+            </button>
+            <button onclick="updatePacelcDetail('PC/EC')" class="p-2 text-left border rounded hover:bg-blue-50 hover:border-blue-300 transition">
+              <span class="font-bold text-red-600 block">PC/EC</span>
+              <span class="text-slate-500 text-[11px]">Bigtable, HBase, Neo4j</span>
+            </button>
+            <button onclick="updatePacelcDetail('PA/EC')" class="p-2 text-left border rounded hover:bg-blue-50 hover:border-blue-300 transition">
+              <span class="font-bold text-amber-600 block">PA/EC</span>
+              <span class="text-slate-500 text-[11px]">MongoDB (mặc định)</span>
+            </button>
+            <button onclick="updatePacelcDetail('PC/EL')" class="p-2 text-left border rounded hover:bg-blue-50 hover:border-blue-300 transition">
+              <span class="font-bold text-purple-600 block">PC/EL</span>
+              <span class="text-slate-500 text-[11px]">Yahoo PNUTS (Rất hiếm)</span>
+            </button>
+          </div>
+
+          <!-- Accord Consensus Highlight -->
+          <div class="p-3 bg-indigo-50 border border-indigo-200 rounded-lg text-xs">
+            <span class="font-bold text-indigo-900 block mb-1">🔥 Đột phá: Giao thức Đồng thuận Accord (CEP-15)</span>
+            <p class="text-indigo-800 leading-tight">
+              Tích hợp trong Cassandra 6.0, Accord loại bỏ Leader (Leaderless), cho phép thực thi giao dịch ACID đa phân vùng với mức cô lập <strong>Strict Serializability</strong> chỉ trong <strong>1 vòng truyền mạng (1 round-trip)</strong> trên lộ trình nhanh.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 2: CƠ CHẾ LƯU TRỮ VẬT LÝ & THUẬT TOÁN (STORAGE ENGINES) -->
+    <section id="storage" class="scroll-mt-20">
+      <div class="border-l-4 border-emerald-600 pl-4 mb-6">
+        <h3 class="text-xl font-bold text-slate-900">2. Cơ Chế Lưu Trữ Dưới Đĩa & Bộ Ba Khuếch Đại (WA / RA / SA)</h3>
+        <p class="text-xs md:text-sm text-slate-600">
+          Mọi thiết kế bộ máy lưu trữ đều là bài toán đánh đổi giữa Hệ số Khuếch đại Ghi (Write Amplification), Đọc (Read Amplification) và Không gian (Space Amplification).
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Amplification Comparison Chart -->
+        <div class="lg:col-span-6 bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+          <h4 class="font-bold text-sm text-slate-800 mb-2">So Sánh Hệ Số Khuếch Đại Giữa Các Storage Engines</h4>
+          <div class="chart-container">
+            <canvas id="ampChart"></canvas>
+          </div>
+          <div class="flex justify-around text-xs mt-3 text-slate-600 font-medium">
+            <span class="flex items-center"><span class="w-3 h-3 bg-red-500 rounded-full inline-block mr-1"></span> WA (Write Amp)</span>
+            <span class="flex items-center"><span class="w-3 h-3 bg-blue-500 rounded-full inline-block mr-1"></span> RA (Read Amp)</span>
+            <span class="flex items-center"><span class="w-3 h-3 bg-amber-500 rounded-full inline-block mr-1"></span> SA (Space Amp)</span>
+          </div>
+        </div>
+
+        <!-- Engines Explanation Cards -->
+        <div class="lg:col-span-6 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+          <!-- B-Tree -->
+          <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm space-y-1.5">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-slate-800 text-sm">B-Tree</span>
+              <span class="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded text-[10px]">WiredTiger (MongoDB)</span>
+            </div>
+            <p class="text-slate-600 leading-normal">
+              Tổ chức trang đĩa cố định, cập nhật tại chỗ (in-place). 
+            </p>
+            <ul class="text-slate-700 list-disc list-inside space-y-0.5">
+              <li><strong>RA Rất Thấp:</strong> Duyệt 1 đường từ Root down Leaf.</li>
+              <li><strong>WA Cao:</strong> Thay đổi nhỏ phải ghi lại cả trang + log.</li>
+              <li><strong>Gây Random I/O:</strong> Giảm tuổi thọ ổ SSD.</li>
+            </ul>
+          </div>
+
+          <!-- LSM-Tree -->
+          <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm space-y-1.5">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-slate-800 text-sm">LSM-Tree</span>
+              <span class="bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded text-[10px]">Cassandra, Bigtable</span>
+            </div>
+            <p class="text-slate-600 leading-normal">
+              Ghi nối tiếp bất biến (Append-only) vào Memtable + CommitLog, xả ra SSTable.
+            </p>
+            <ul class="text-slate-700 list-disc list-inside space-y-0.5">
+              <li><strong>WA Rất Thấp:</strong> Ghi tuần tự tốc độ cao.</li>
+              <li><strong>RA/SA Cao:</strong> Cần Bloom Filter & Compaction dọn dẹp.</li>
+              <li><strong>Tombstone:</strong> Ghi đè đánh dấu xóa.</li>
+            </ul>
+          </div>
+
+          <!-- HMA -->
+          <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm space-y-1.5">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-slate-800 text-sm">HMA (Hybrid Memory)</span>
+              <span class="bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded text-[10px]">Aerospike</span>
+            </div>
+            <p class="text-slate-600 leading-normal">
+              Chỉ mục 64-byte/bản ghi trên DRAM, dữ liệu trên NVMe SSD dùng Direct I/O.
+            </p>
+            <ul class="text-slate-700 list-disc list-inside space-y-0.5">
+              <li><strong>1-Hop Lookup:</strong> Nhảy thẳng từ RAM xuống đĩa NVMe.</li>
+              <li><strong>Bỏ qua OS Cache:</strong> Không bị sao chép bộ nhớ kép.</li>
+              <li><strong>Chi phí tối ưu:</strong> Rẻ hơn 9.5x so với Redis DRAM.</li>
+            </ul>
+          </div>
+
+          <!-- Native Graph -->
+          <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm space-y-1.5">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-slate-800 text-sm">Index-Free Adjacency</span>
+              <span class="bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded text-[10px]">Neo4j Native Graph</span>
+            </div>
+            <p class="text-slate-600 leading-normal">
+              Bản ghi kích thước cố định: Node (15B), Edge (34B), Property (41B).
+            </p>
+            <ul class="text-slate-700 list-disc list-inside space-y-0.5">
+              <li><strong>Độ phức tạp O(1):</strong> Tính trực tiếp Offset = N * 15B.</li>
+              <li><strong>Con trỏ vật lý:</strong> Nối liên kết kép không qua index.</li>
+              <li><strong>Thách thức Sharding:</strong> Khó chia nhỏ qua nhiều server.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Compaction Strategies Focus Box -->
+      <div class="mt-6 bg-slate-900 text-white p-5 rounded-xl shadow-md">
+        <h4 class="font-bold text-sm text-blue-400 mb-3 uppercase tracking-wider">So Sánh Các Chiến Lược Nén SSTable (Compaction Strategies) Trong Cassandra</h4>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
+          <div class="bg-slate-800 p-3 rounded border border-slate-700">
+            <span class="font-bold text-amber-300 text-sm block">STCS (SizeTiered)</span>
+            <p class="text-slate-300 mt-1">Gom SSTable cùng kích thước. Tối ưu cho tải GHI nặng.</p>
+            <span class="text-red-400 font-semibold block mt-2">⚠️ Cần > 50% đĩa trống! Gây bão nén (Compaction storm).</span>
+          </div>
+          <div class="bg-slate-800 p-3 rounded border border-slate-700">
+            <span class="font-bold text-emerald-300 text-sm block">LCS (Leveled)</span>
+            <p class="text-slate-300 mt-1">Chia tầng L0, L1, L2... Không chồng dải khóa từ L1+. Tối ưu ĐỌC.</p>
+            <span class="text-amber-400 font-semibold block mt-2">⚠️ Cần > 30% đĩa trống. Tăng Write Amp (WA).</span>
+          </div>
+          <div class="bg-slate-800 p-3 rounded border border-slate-700">
+            <span class="font-bold text-blue-300 text-sm block">TWCS (TimeWindow)</span>
+            <p class="text-slate-300 mt-1">Gom theo cửa sổ thời gian. Tối ưu dữ liệu Time-Series có TTL.</p>
+            <span class="text-red-400 font-semibold block mt-2">⚠️ Hỏng hoàn toàn nếu ghi dữ liệu lệch thứ tự thời gian.</span>
+          </div>
+          <div class="bg-slate-800 p-3 rounded border border-indigo-500/50">
+            <span class="font-bold text-indigo-300 text-sm block">UCS (Unified CEP-26)</span>
+            <p class="text-slate-300 mt-1">Cassandra 5.0+. Chia Shards theo mật độ Token (Density), nén đa nhân CPU.</p>
+            <span class="text-emerald-400 font-semibold block mt-2">✅ Giảm tối đa đĩa tạm. Cấu hình lai linh hoạt 'T4,T4,L10'.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 3: PHÂN TÍCH CHUYÊN SÂU 4 HỌ NOSQL & MÔ PHỎNG -->
+    <section id="deepdive" class="scroll-mt-20">
+      <div class="border-l-4 border-purple-600 pl-4 mb-6">
+        <h3 class="text-xl font-bold text-slate-900">3. Khám Phá Chuyên Sâu 4 Họ NoSQL Phổ Biến</h3>
+        <p class="text-xs md:text-sm text-slate-600">
+          Phân tích kiến trúc nội tại, thuật toán đồng bộ, ưu nhược điểm và mô phỏng thực tế.
+        </p>
+      </div>
+
+      <!-- Tab Navigation Header -->
+      <div class="flex border-b border-slate-200 overflow-x-auto custom-scrollbar text-xs md:text-sm space-x-4 mb-6">
+        <button onclick="switchTab('wide-column')" id="tab-wide-column" class="py-2.5 px-3 whitespace-nowrap tab-active font-medium">1. Wide-Column Stores</button>
+        <button onclick="switchTab('document')" id="tab-document" class="py-2.5 px-3 whitespace-nowrap text-slate-500 hover:text-slate-800 font-medium">2. Document Stores</button>
+        <button onclick="switchTab('key-value')" id="tab-key-value" class="py-2.5 px-3 whitespace-nowrap text-slate-500 hover:text-slate-800 font-medium">3. Key-Value Stores</button>
+        <button onclick="switchTab('graph')" id="tab-graph" class="py-2.5 px-3 whitespace-nowrap text-slate-500 hover:text-slate-800 font-medium">4. Graph Databases</button>
+        <button onclick="switchTab('multimodel')" id="tab-multimodel" class="py-2.5 px-3 whitespace-nowrap text-slate-500 hover:text-slate-800 font-medium">5. Multi-Model & Vector</button>
+      </div>
+
+      <!-- TAB CONTENT CONTAINER -->
+      <div id="tab-contents">
+
+        <!-- TAB 1: WIDE-COLUMN -->
+        <div id="content-wide-column" class="space-y-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+              <div class="flex items-center justify-between border-b pb-2">
+                <h4 class="font-bold text-slate-800 text-base">Google Cloud Bigtable / HBase</h4>
+                <span class="bg-red-100 text-red-800 font-bold text-xs px-2 py-0.5 rounded">PC/EC (Strong)</span>
+              </div>
+              <p class="text-xs text-slate-600 leading-relaxed">
+                Tách biệt hoàn toàn Tính toán (Tablet Servers) và Lưu trữ (Shared Redo Log & SSTables trên Colossus Distributed Filesystem).
+              </p>
+              <div class="bg-slate-50 p-3 rounded text-xs space-y-1 border border-slate-200">
+                <span class="font-semibold text-slate-800">Cơ chế chuyển đổi sập nút:</span>
+                <p class="text-slate-600">Khi Tablet Server bị sập, Master chỉ gán lại metadata cho nút khác tiếp quản ngay lập tức. Không cần sao chép dữ liệu qua mạng.</p>
+              </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+              <div class="flex items-center justify-between border-b pb-2">
+                <h4 class="font-bold text-slate-800 text-base">Apache Cassandra 5.0/6.0 / ScyllaDB</h4>
+                <span class="bg-blue-100 text-blue-800 font-bold text-xs px-2 py-0.5 rounded">PA/EL (Tunable)</span>
+              </div>
+              <p class="text-xs text-slate-600 leading-relaxed">
+                Kiến trúc Masterless Peer-to-Peer sử dụng Consistent Hashing Token Ring. Dữ liệu ghi vào CommitLog -> Memtable -> SSTables.
+              </p>
+              <div class="bg-slate-50 p-3 rounded text-xs space-y-1 border border-slate-200">
+                <span class="font-semibold text-slate-800">Cải tiến Cassandra 5.0+:</span>
+                <p class="text-slate-600">Trie-based Memtable & BTI SSTables giúp giảm tiêu thụ JVM RAM, hỗ trợ chỉ mục Vector SAI nguyên bản.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 2: DOCUMENT & SIMULATOR -->
+        <div id="content-document" class="hidden space-y-6">
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div class="lg:col-span-6 bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+              <h4 class="font-bold text-slate-800 border-b pb-2">MongoDB WiredTiger & Cấu Trúc Bộ Nhớ</h4>
+              <p class="text-xs text-slate-600 leading-relaxed">
+                WiredTiger cấp phát Cache mặc định = <code class="bg-slate-100 px-1 rounded text-red-600 font-mono">Max(50% * (RAM - 1GB), 256MB)</code>.
+                Dữ liệu trên RAM chưa nén dạng B-Tree; trên đĩa nén Snappy/Zstd.
+              </p>
+              <ul class="text-xs text-slate-700 list-disc list-inside space-y-1">
+                <li><strong>MVCC & History Store:</strong> Cập nhật tạo update chain trong RAM. Phiên bản cũ chuyển sang <code class="font-mono text-slate-800">WiredTigerHS.wt</code>.</li>
+                <li><strong>Checkpoint:</strong> Thực hiện mỗi 60 giây, xả trang bẩn xuống đĩa.</li>
+                <li><strong>Journal (WAL):</strong> Nối log bền vững mỗi 100ms hoặc khi gọi <code class="font-mono">j: true</code>.</li>
+              </ul>
+            </div>
+
+            <!-- Interactive Eviction Simulator -->
+            <div class="lg:col-span-6 bg-slate-900 text-white p-5 rounded-xl shadow-md space-y-4">
+              <div class="flex justify-between items-center border-b border-slate-700 pb-2">
+                <h4 class="font-bold text-sm text-amber-400">⚡ Mô Phỏng Trạng Thái WiredTiger Cache Eviction</h4>
+                <span class="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded">Tác động P99 Latency</span>
+              </div>
+
+              <div class="space-y-2">
+                <div class="flex justify-between text-xs">
+                  <span>Tỷ lệ Dirty Bytes trong Cache:</span>
+                  <span id="dirty-val" class="font-bold text-amber-300">12%</span>
+                </div>
+                <input id="dirty-slider" type="range" min="0" max="100" value="12" class="w-full accent-amber-500 cursor-pointer" oninput="updateEvictionSim(this.value)">
+              </div>
+
+              <!-- Output Status Display -->
+              <div id="eviction-status-box" class="p-3 bg-slate-800 rounded-lg border border-slate-700 text-xs space-y-1">
+                <div class="flex items-center justify-between">
+                  <span class="font-bold text-emerald-400" id="eviction-mode">Chế độ: Passive Eviction (Bình thường)</span>
+                  <span class="text-[11px] text-slate-400" id="latency-val">P99 Latency: ~8 ms</span>
+                </div>
+                <p id="eviction-desc" class="text-slate-300 text-[11px] leading-relaxed">
+                  Các luồng nền (background threads) âm thầm dọn dẹp bộ nhớ đệm. Ứng dụng vận hành mượt mà.
+                </p>
+              </div>
+
+              <p class="text-[11px] text-slate-400 italic">
+                * Thử kéo thanh trượt vượt ngưỡng 20% (Aggressive Eviction) để thấy P99 Latency bị vọt từ 8ms lên 900ms do Worker Threads bị ép tự dọn Cache!
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 3: KEY-VALUE -->
+        <div id="content-key-value" class="hidden space-y-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+              <div class="flex justify-between items-center border-b pb-2">
+                <h4 class="font-bold text-slate-800">Redis (In-Memory Pure)</h4>
+                <span class="bg-amber-100 text-amber-800 text-xs px-2 py-0.5 rounded font-bold">Thuần DRAM</span>
+              </div>
+              <p class="text-xs text-slate-600 leading-relaxed">
+                Toàn bộ dữ liệu, chỉ mục nằm trên RAM. Tốc độ phản hồi dưới 1ms. 
+              </p>
+              <div class="bg-amber-50 border border-amber-200 p-2.5 rounded text-xs text-amber-900">
+                ⚠️ <strong>Giới hạn Kinh tế:</strong> Chi phí DRAM rất đắt khi dung lượng vượt >50GB. Bản Enterprise hỗ trợ CRDTs cho đa vùng.
+              </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+              <div class="flex justify-between items-center border-b pb-2">
+                <h4 class="font-bold text-slate-800">Aerospike (Hybrid Memory Architecture)</h4>
+                <span class="bg-purple-100 text-purple-800 text-xs px-2 py-0.5 rounded font-bold">DRAM + NVMe SSD</span>
+              </div>
+              <p class="text-xs text-slate-600 leading-relaxed">
+                Chỉ mục 64 bytes/bản ghi trên RAM; dữ liệu thực nằm trực tiếp trên khối thiết bị NVMe SSD qua <code class="font-mono bg-slate-100 px-1">direct-io true</code>.
+              </p>
+              <div class="bg-purple-50 border border-purple-200 p-2.5 rounded text-xs text-purple-900">
+                ✅ <strong>Đột phá:</strong> Đạt độ trễ &lt;1ms P99 ở quy mô hàng Terabytes với chi phí rẻ hơn Redis tới 9.5 lần.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 4: GRAPH -->
+        <div id="content-graph" class="hidden space-y-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+              <h4 class="font-bold text-slate-800 border-b pb-2">Neo4j (Native Graph Storage)</h4>
+              <p class="text-xs text-slate-600 leading-relaxed">
+                Sử dụng nguyên lý <strong>Index-Free Adjacency</strong> với các tệp vật lý kích thước bản ghi cố định:
+              </p>
+              <div class="grid grid-cols-3 gap-2 text-center text-xs">
+                <div class="bg-slate-100 p-2 rounded">
+                  <span class="font-bold block">Node Store</span>
+                  <span class="text-slate-500">15 Bytes</span>
+                </div>
+                <div class="bg-slate-100 p-2 rounded">
+                  <span class="font-bold block">Rel Store</span>
+                  <span class="text-slate-500">34 Bytes</span>
+                </div>
+                <div class="bg-slate-100 p-2 rounded">
+                  <span class="font-bold block">Property Store</span>
+                  <span class="text-slate-500">41 Bytes</span>
+                </div>
+              </div>
+              <p class="text-xs text-slate-500 italic">
+                * Nghịch lý: Thuộc tính & Chỉ mục chiếm >91% dung lượng đĩa thực tế chứ không phải bản ghi Đỉnh/Cạnh!
+              </p>
+            </div>
+
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+              <h4 class="font-bold text-slate-800 border-b pb-2">ArangoDB (SmartGraphs Sharding)</h4>
+              <p class="text-xs text-slate-600 leading-relaxed">
+                Giải quyết bài toán phân mảnh đồ thị phân tán bằng cách yêu cầu thuộc tính <code class="font-mono bg-slate-100">SmartGraph attribute</code>.
+              </p>
+              <div class="bg-slate-50 p-3 rounded text-xs border border-slate-200 text-slate-700">
+                Gom các đồ thị con có liên kết mật thiết về chung một server vật lý, giúp thực thi mượt mà truy vấn nối sâu 6-hop mà không bị nghẽn đứt đoạn do truyền mạng.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 5: MULTI-MODEL & VECTOR -->
+        <div id="content-multimodel" class="hidden space-y-6">
+          <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+            <h4 class="font-bold text-slate-800 border-b pb-2">Xu Hướng Hội Tụ Đa Mô Hình & Tích Hợp Search Vector Tự Nhiên (AI-Native)</h4>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+              <div class="p-3 bg-slate-50 rounded border border-slate-200">
+                <span class="font-bold text-blue-700 block mb-1">Cassandra 5.0 SAI Vector</span>
+                <p class="text-slate-600">Gắn trực tiếp chỉ mục Vector (Storage-Attached Indexing) vào từng SSTable. Tự động Compaction đồng bộ.</p>
+              </div>
+              <div class="p-3 bg-slate-50 rounded border border-slate-200">
+                <span class="font-bold text-indigo-700 block mb-1">Cosmos DB DiskANN</span>
+                <p class="text-slate-600">Tích hợp thuật toán chỉ mục đồ thị Vector DiskANN trực tiếp vào ARS engine phục vụ kiến trúc Multi-agent AI.</p>
+              </div>
+              <div class="p-3 bg-slate-50 rounded border border-slate-200">
+                <span class="font-bold text-purple-700 block mb-1">Aerospike Vector Search</span>
+                <p class="text-slate-600">Mở rộng từ Key-Value sang JSON Document, Graph và Vector Search trên nền hạ tầng HMA NVMe.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- SECTION 4: MA TRẬN SO SÁNH TOÀN DIỆN & TRÌNH LỌC -->
+    <section id="matrix" class="scroll-mt-20">
+      <div class="border-l-4 border-amber-600 pl-4 mb-6">
+        <h3 class="text-xl font-bold text-slate-900">4. Ma Trận So Sánh Chi Tiết Các Hệ Quản Trị NoSQL</h3>
+        <p class="text-xs md:text-sm text-slate-600">
+          Tra cứu, lọc và so sánh 8 hệ quản trị NoSQL tiêu biểu dựa trên nghiên cứu kỹ thuật.
+        </p>
+      </div>
+
+      <!-- Controls & Filters -->
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-4 flex flex-col md:flex-row gap-3 items-center justify-between">
+        <div class="w-full md:w-1/3">
+          <input id="search-db" type="text" placeholder="🔍 Tìm kiếm hệ thống (VD: Cassandra, MongoDB...)" class="w-full text-xs p-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" onkeyup="filterMatrix()">
+        </div>
+        <div class="flex flex-wrap gap-2 w-full md:w-auto text-xs">
+          <select id="filter-model" class="p-2 border rounded-lg bg-slate-50" onchange="filterMatrix()">
+            <option value="ALL">Tất cả Mô hình</option>
+            <option value="Wide-Column">Wide-Column</option>
+            <option value="Document">Document</option>
+            <option value="Key-Value">Key-Value</option>
+            <option value="Graph">Graph</option>
+          </select>
+
+          <select id="filter-pacelc" class="p-2 border rounded-lg bg-slate-50" onchange="filterMatrix()">
+            <option value="ALL">Tất cả PACELC</option>
+            <option value="PA/EL">PA/EL</option>
+            <option value="PC/EC">PC/EC</option>
+            <option value="PA/EC">PA/EC</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Interactive Table -->
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto custom-scrollbar">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr class="bg-slate-900 text-white uppercase tracking-wider text-[11px]">
+              <th class="p-3">Hệ Quản Trị</th>
+              <th class="p-3">Mô Hình & PACELC</th>
+              <th class="p-3">Storage Engine Dưới Đĩa</th>
+              <th class="p-3">Mô Hình Giao Dịch & Consistent</th>
+              <th class="p-3">Độ Trễ & Vận Hành</th>
+              <th class="p-3">Bài Toán Tối Ưu (Sweet Spot)</th>
+            </tr>
+          </thead>
+          <tbody id="matrix-tbody" class="divide-y divide-slate-200">
+            <!-- Dynamic rows will be injected by JavaScript -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SECTION 5: TRỢ LÝ TRẮC NGHIỆM LỰA CHỌN NOSQL (DECISION WIZARD) -->
+    <section id="decision" class="scroll-mt-20">
+      <div class="border-l-4 border-indigo-600 pl-4 mb-6">
+        <h3 class="text-xl font-bold text-slate-900">5. Trợ Lý Tư Vấn Lựa Chọn NoSQL Cho Bài Toán</h3>
+        <p class="text-xs md:text-sm text-slate-600">
+          Trả lời 4 câu hỏi dưới đây để thuật toán phân tích nhu cầu và đề xuất cơ sở dữ liệu NoSQL tối ưu nhất.
+        </p>
+      </div>
+
+      <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-md max-w-3xl mx-auto space-y-6">
+        <!-- Progress Bar -->
+        <div class="w-full bg-slate-100 rounded-full h-2">
+          <div id="quiz-progress" class="bg-indigo-600 h-2 rounded-full transition-all duration-300" style="width: 25%"></div>
+        </div>
+
+        <!-- Question Box -->
+        <div id="quiz-box" class="space-y-4">
+          <span class="text-xs font-bold text-indigo-600 uppercase tracking-widest" id="quiz-step-title">Bước 1 / 4</span>
+          <h4 class="text-base font-bold text-slate-800" id="quiz-question">Mẫu cấu trúc dữ liệu chính của ứng dụng là gì?</h4>
+
+          <div id="quiz-options" class="grid grid-cols-1 gap-2 text-xs">
+            <!-- Options injected by JS -->
+          </div>
+        </div>
+
+        <!-- Recommendation Output Box (Hidden initially) -->
+        <div id="quiz-result" class="hidden space-y-4 p-5 bg-indigo-50 border border-indigo-200 rounded-xl">
+          <div class="flex items-center space-x-2">
+            <span class="text-xl">💡</span>
+            <h4 class="text-base font-bold text-indigo-900">Đề Xuất Hệ Thống Phù Hợp Tối Ưu:</h4>
+          </div>
+          <div id="result-db-name" class="text-xl font-extrabold text-indigo-700">Apache Cassandra</div>
+          <p id="result-rationale" class="text-xs text-slate-700 leading-relaxed">
+            Lý do lựa chọn...
+          </p>
+          <div class="p-3 bg-white rounded border border-indigo-100 text-xs text-slate-600">
+            <strong>⚠️ Lưu ý vận hành quan trọng:</strong> <span id="result-warning">...</span>
+          </div>
+          <button onclick="resetQuiz()" class="text-xs bg-indigo-600 text-white font-bold px-4 py-2 rounded hover:bg-indigo-700 transition">Thử Lại Từ Đầu</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 6: OPERATIONAL BEST PRACTICES & TCO CALCULATOR -->
+    <section id="ops" class="scroll-mt-20">
+      <div class="border-l-4 border-slate-700 pl-4 mb-6">
+        <h3 class="text-xl font-bold text-slate-900">6. Kinh Tế Học Hạ Tầng (TCO) & Quy Tắc Quản Trị Vận Hành</h3>
+        <p class="text-xs md:text-sm text-slate-600">
+          Tính toán chi phí phần cứng và phòng tránh các bẫy cấu hình sai lầm trong môi trường production.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Interactive TCO Calculator -->
+        <div class="lg:col-span-6 bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+          <h4 class="font-bold text-sm text-slate-800 border-b pb-2">📊 Máy Tính So Sánh Chi Phí Hạ Tầng TCO (DRAM vs NVMe HMA)</h4>
+          <div class="space-y-3 text-xs">
+            <div>
+              <div class="flex justify-between">
+                <span>Tổng dung lượng dữ liệu cần lưu:</span>
+                <span id="tco-gb-label" class="font-bold text-blue-600">500 GB</span>
+              </div>
+              <input id="tco-slider" type="range" min="10" max="5000" value="500" step="10" class="w-full accent-blue-600" oninput="calculateTCO(this.value)">
+            </div>
+
+            <div class="chart-container" style="height: 220px;">
+              <canvas id="tcoChart"></canvas>
+            </div>
+            <p id="tco-insight" class="text-[11px] text-slate-600 italic">
+              * Tại quy mô 500 GB, Aerospike HMA chỉ tốn ~32GB DRAM cho chỉ mục, tiết kiệm hơn 85% chi phí so với Redis In-Memory.
+            </p>
+          </div>
+        </div>
+
+        <!-- Best Practices Table -->
+        <div class="lg:col-span-6 bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+          <h4 class="font-bold text-sm text-slate-800 border-b pb-2">🛠️ Bảng Quy Tắc Thực Hành Tốt Nhất (Best Practices)</h4>
+          <div class="space-y-2 text-xs custom-scrollbar max-h-80 overflow-y-auto pr-1">
+            <div class="p-2.5 bg-slate-50 border rounded">
+              <span class="font-bold text-slate-800 block">MongoDB WiredTiger RAM</span>
+              <p class="text-slate-600 text-[11px]">Không bao giờ cấp >50% RAM cho WiredTiger cache. Để chừa RAM cho OS Filesystem Cache giữ các khối nén.</p>
+            </div>
+            <div class="p-2.5 bg-slate-50 border rounded">
+              <span class="font-bold text-slate-800 block">Cassandra Compaction & Disk</span>
+              <p class="text-slate-600 text-[11px]">Chuyển sang UCS (Unified Compaction Strategy) ở v5.0+. Luôn duy trì đĩa trống >50% nếu dùng STCS cũ.</p>
+            </div>
+            <div class="p-2.5 bg-slate-50 border rounded">
+              <span class="font-bold text-slate-800 block">Aerospike NVMe Configuration</span>
+              <p class="text-slate-600 text-[11px]">Bật <code class="font-mono">direct-io true</code> và <code class="font-mono">data-in-memory false</code>. Không dùng đĩa HDD từ tính.</p>
+            </div>
+            <div class="p-2.5 bg-slate-50 border rounded">
+              <span class="font-bold text-slate-800 block">Tunable Consistency Per Query</span>
+              <p class="text-slate-600 text-[11px]">Không áp đặt 1 mức nhất quán cho cả hệ thống. Dùng Strong/Accord cho tài chính, Session/Eventual cho social feeds.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-slate-900 text-slate-400 text-xs py-6 border-t border-slate-800 mt-12">
+    <div class="max-w-7xl mx-auto px-4 text-center space-y-2">
+      <p>Báo Cáo Nghiên Cứu Chuyên Sâu Kiến Trúc Cơ Sở Dữ Liệu NoSQL © 2026</p>
+      <p class="text-slate-500">Thiết kế tương tác phục vụ việc tra cứu, giảng dạy và ra quyết định kiến trúc phần mềm.</p>
+    </div>
+  </footer>
+
+  <!-- JavaScript Application Logic -->
+  <script>
+    // --- DATA STRUCTURES ---
+    const pacelcData = {
+      'PA/EL': {
+        title: 'Nhóm PA/EL (Tối ưu Khả Dụng & Độ Trễ)',
+        desc: 'Khi đứt mạng (P), hệ thống giữ Sẵn Sàng (A). Khi mạng bình thường (E), tối ưu Độ Trễ thấp (L) bằng cách phản hồi ngay không chờ đồng bộ tất cả bản sao.',
+        systems: 'Apache Cassandra, ScyllaDB, Amazon DynamoDB, Riak'
+      },
+      'PC/EC': {
+        title: 'Nhóm PC/EC (Tính Nhất Quán Tuyệt Đối)',
+        desc: 'Sẵn sàng từ chối dịch vụ khi đứt mạng (P) hoặc chấp nhận độ trễ cao khi mạng bình thường (E) để đảm bảo mọi điểm truy vấn luôn thấy cùng dữ liệu mới nhất.',
+        systems: 'Google Cloud Bigtable, Apache HBase, Google Spanner, Neo4j'
+      },
+      'PA/EC': {
+        title: 'Nhóm PA/EC (Cân Bằng Chủ Nút)',
+        desc: 'Trong điều kiện bình thường (E), định tuyến qua Primary để đảm bảo Nhất Quán (C). Khi có sự cố (P), tự động failover để duy trì Khả Dụng (A).',
+        systems: 'MongoDB (cấu hình mặc định), Hazelcast'
+      },
+      'PC/EL': {
+        title: 'Nhóm PC/EL (Cấu Hình Hiếm Độc Lập)',
+        desc: 'Nới lỏng nhất quán để giảm độ trễ khi bình thường, nhưng khóa hệ thống dừng phục vụ khi đứt đọan mạng.',
+        systems: 'Yahoo PNUTS (Rất hiếm gặp trong thực tế)'
+      }
+    };
+
+    const dbMatrix = [
+      {
+        name: 'Apache Cassandra',
+        version: 'v5.0 / v6.0',
+        model: 'Wide-Column',
+        pacelc: 'PA/EL',
+        engine: 'LSM-Tree (Trie Memtable, BTI SSTable, UCS Compaction)',
+        consistency: 'Tunable Quorum ($R+W>N$), Accord 1-Roundtrip Strict ACID',
+        latency: 'Ghi cực thấp (&lt;2ms), Đọc trung bình (cần Bloom Filter)',
+        sweetspot: 'Ghi thông lượng Petabyte, IoT, Log giao dịch, Multi-DC'
+      },
+      {
+        name: 'Google Bigtable',
+        version: 'Cloud Native',
+        model: 'Wide-Column',
+        pacelc: 'PC/EC',
+        engine: 'LSM-Tree (Tablet Servers + Colossus Distributed FS)',
+        consistency: 'Strong Consistency cấp độ Single-Row',
+        latency: 'Độ trễ 1 chữ số ms ổn định ở hàng tỷ dòng',
+        sweetspot: 'Phân tích tài chính thời gian thực, Time-Series trên GCP'
+      },
+      {
+        name: 'MongoDB',
+        version: 'v7.0 / v8.0',
+        model: 'Document',
+        pacelc: 'PA/EC',
+        engine: 'WiredTiger B-Tree (Snappy/Zstd, MVCC History Store)',
+        consistency: 'Strong trên Primary, Causal Consistency, Multi-doc ACID',
+        latency: 'P99 ~8ms (vọt lên 900ms nếu Dirty Cache >= 20%)',
+        sweetspot: 'E-commerce, CMS, Microservices có Schema biến đổi nhanh'
+      },
+      {
+        name: 'Azure Cosmos DB',
+        version: 'Cloud Native',
+        model: 'Document / Multi',
+        pacelc: 'Tunable (5 Mức)',
+        engine: 'ARS (Atom-Record-Sequence), DiskANN Vector Index',
+        consistency: '5 mức: Strong, Bounded Staleness, Session, Prefix, Eventual',
+        latency: 'SLA Đọc/Ghi &lt;10ms P99 toàn cầu',
+        sweetspot: 'App toàn cầu Active-Active, AI Copilot Vector Search'
+      },
+      {
+        name: 'Aerospike',
+        version: 'v6+ / v8.0',
+        model: 'Key-Value',
+        pacelc: 'PA/EL hoặc PC/EC',
+        engine: 'HMA (Primary Index 64B DRAM, Data Direct-IO NVMe SSD)',
+        consistency: 'Strong Consistency & Cross-namespace ACID từ v8.0',
+        latency: '1-Hop Lookup &lt;1ms P99 ở quy mô Terabytes',
+        sweetspot: 'AdTech RTB, Chống gian lận tài chính, Real-time Feature Store'
+      },
+      {
+        name: 'Redis',
+        version: 'v7.x / Enterprise',
+        model: 'Key-Value',
+        pacelc: 'PA/EC',
+        engine: 'Pure In-Memory DRAM (RDB/AOF Persistence)',
+        consistency: 'Bất đồng bộ mặc định; Enterprise hỗ trợ CRDTs',
+        latency: 'Cực nhanh &lt;1ms (Sub-millisecond)',
+        sweetspot: 'Caching, Session Store, Leaderboards, Rate Limiting (&lt;50GB)'
+      },
+      {
+        name: 'Neo4j',
+        version: 'v5.x Native',
+        model: 'Graph',
+        pacelc: 'PC/EC',
+        engine: 'Index-Free Adjacency (Node 15B, Edge 34B fixed records)',
+        consistency: 'ACID Transactions đầy đủ (Core/Replica)',
+        latency: 'Duyệt đồ thị O(1) hằng số mỗi bước nhảy',
+        sweetspot: 'Phát hiện vòng lặp rửa tiền (Fraud), Knowledge Graph'
+      },
+      {
+        name: 'ArangoDB',
+        version: 'v3.x Multi',
+        model: 'Graph / Document',
+        pacelc: 'PC/EC',
+        engine: 'RocksDB LSM-Tree + SmartGraphs Sharding',
+        consistency: 'ACID Transactions theo phân mảnh',
+        latency: 'Độ trễ thấp cho truy vấn nối sâu 6-hop phân tán',
+        sweetspot: 'Đồ thị doanh nghiệp quy mô lớn không vừa 1 server'
+      }
+    ];
+
+    // Quiz Questions Data
+    const quizQuestions = [
+      {
+        title: 'Bước 1 / 4: Mô hình Dữ liệu',
+        q: 'Mẫu cấu trúc dữ liệu chính mà ứng dụng của bạn sẽ xử lý là gì?',
+        options: [
+          { text: 'Bảng thưa nhiều cột, chuỗi thời gian, ghi logs liên tục', type: 'Wide-Column' },
+          { text: 'Tài liệu JSON phân cấp, linh hoạt, thuộc tính đa hình', type: 'Document' },
+          { text: 'Khóa-Giá trị siêu tốc, bảng xếp hạng, bộ đệm tạm', type: 'Key-Value' },
+          { text: 'Đỉnh và Cạnh liên kết mạng lưới phức tạp (Graph)', type: 'Graph' }
+        ]
+      },
+      {
+        title: 'Bước 2 / 4: Yêu cầu Đồng thuận & Ràng buộc',
+        q: 'Mức độ chấp nhận đánh đổi về Tính Nhất Quán (Consistency) của bạn?',
+        options: [
+          { text: 'Cần ACID tuyệt đối, không được trả về dữ liệu cũ (Strong)', type: 'STRONG' },
+          { text: 'Chấp nhận Nhất quán Cuối cùng (Eventual) để đạt độ trễ cực thấp', type: 'EVENTUAL' },
+          { text: 'Chỉ cần người dùng đọc được đúng những gì họ vừa ghi (Session)', type: 'SESSION' }
+        ]
+      },
+      {
+        title: 'Bước 3 / 4: Quy mô & Băng thông',
+        q: 'Dung lượng dữ liệu dự kiến và tốc độ ghi dữ liệu?',
+        options: [
+          { text: 'Hàng trăm Terabytes đến Petabytes, Băng thông GHI cực lớn', type: 'SCALE_HIGH' },
+          { text: 'Dưới 50 GB, cần tốc độ ĐỌC/GHI siêu việt sub-millisecond', type: 'SCALE_RAM' },
+          { text: 'Hàng Terabytes, cần P99 <1ms nhưng ngân sách hạ tầng hạn chế', type: 'SCALE_HMA' }
+        ]
+      },
+      {
+        title: 'Bước 4 / 4: Môi trường Triển khai',
+        q: 'Phương thức triển khai hạ tầng ưu tiên?',
+        options: [
+          { text: 'Tự quản lý Multi-Cloud / On-Premise trên máy chủ riêng', type: 'SELF_MANAGED' },
+          { text: 'Dịch vụ Fully Managed Serverless trên Cloud (AWS/Azure/GCP)', type: 'CLOUD_MANAGED' }
+        ]
+      }
+    ];
+
+    let currentQuizStep = 0;
+    let quizAnswers = [];
+
+    // --- CHART INITIALIZATIONS ---
+    let pacelcChartInst, ampChartInst, tcoChartInst;
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initPacelcChart();
+      initAmpChart();
+      initTcoChart();
+      renderMatrixTable(dbMatrix);
+      renderQuizStep();
+    });
+
+    // 1. PACELC Scatter Plot Chart
+    function initPacelcChart() {
+      const ctx = document.getElementById('pacelcChart').getContext('2d');
+      pacelcChartInst = new Chart(ctx, {
+        type: 'bubble',
+        data: {
+          datasets: [
+            { label: 'PA/EL', data: [{x: 20, y: 20, r: 12}], backgroundColor: 'rgba(37, 99, 235, 0.7)' },
+            { label: 'PC/EC', data: [{x: 80, y: 80, r: 12}], backgroundColor: 'rgba(220, 38, 38, 0.7)' },
+            { label: 'PA/EC', data: [{x: 20, y: 80, r: 12}], backgroundColor: 'rgba(217, 119, 6, 0.7)' },
+            { label: 'PC/EL', data: [{x: 80, y: 20, r: 8}], backgroundColor: 'rgba(147, 51, 234, 0.5)' }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'top', labels: { boxWidth: 10, font: { size: 10 } } },
+            tooltip: {
+              callbacks: {
+                label: function(ctx) {
+                  return ctx.dataset.label + ': Click nút bên cạnh để xem mô tả';
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              min: 0, max: 100,
+              title: { display: true, text: 'Đánh đổi Normal: Latency (Trái) <---> Consistency (Phải)', font: { size: 10 } }
+            },
+            y: {
+              min: 0, max: 100,
+              title: { display: true, text: 'Đánh đổi Partition: Availability (Dưới) <---> Consistency (Trên)', font: { size: 10 } }
+            }
+          }
+        }
+      });
+    }
+
+    // 2. Storage Amplification Bar Chart
+    function initAmpChart() {
+      const ctx = document.getElementById('ampChart').getContext('2d');
+      ampChartInst = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['B-Tree (WiredTiger)', 'LSM-Tree (Cassandra)', 'HMA (Aerospike)', 'Native Graph (Neo4j)'],
+          datasets: [
+            { label: 'Write Amp (WA)', data: [85, 25, 30, 50], backgroundColor: 'rgba(239, 68, 68, 0.8)' },
+            { label: 'Read Amp (RA)', data: [20, 75, 15, 20], backgroundColor: 'rgba(59, 130, 246, 0.8)' },
+            { label: 'Space Amp (SA)', data: [30, 80, 20, 65], backgroundColor: 'rgba(245, 158, 11, 0.8)' }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: { beginAtZero: true, max: 100, title: { display: true, text: 'Mức độ Tương đối (%)', font: { size: 10 } } }
+          }
+        }
+      });
+    }
+
+    // 3. TCO Comparison Chart
+    function initTcoChart() {
+      const ctx = document.getElementById('tcoChart').getContext('2d');
+      tcoChartInst = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Redis (Pure DRAM)', 'Aerospike (HMA NVMe)'],
+          datasets: [{
+            label: 'Ước tính Chi phí Hạ tầng Hàng năm ($)',
+            data: [15000, 1800],
+            backgroundColor: ['rgba(239, 68, 68, 0.8)', 'rgba(16, 185, 129, 0.8)']
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: { beginAtZero: true, title: { display: true, text: 'Chi phí ước tính ($)', font: { size: 10 } } }
+          }
+        }
+      });
+    }
+
+    // --- INTERACTIVE HANDLERS ---
+
+    // Update PACELC Details Card
+    function updatePacelcDetail(type) {
+      const data = pacelcData[type];
+      if (!data) return;
+      document.getElementById('pacelc-title').innerText = data.title;
+      document.getElementById('pacelc-desc').innerText = data.desc;
+      document.getElementById('pacelc-systems').innerText = data.systems;
+    }
+
+    // Tab Switching Logic
+    function switchTab(tabId) {
+      const tabs = ['wide-column', 'document', 'key-value', 'graph', 'multimodel'];
+      tabs.forEach(t => {
+        const btn = document.getElementById(`tab-${t}`);
+        const content = document.getElementById(`content-${t}`);
+        if (t === tabId) {
+          btn.classList.add('tab-active');
+          btn.classList.remove('text-slate-500');
+          content.classList.remove('hidden');
+        } else {
+          btn.classList.remove('tab-active');
+          btn.classList.add('text-slate-500');
+          content.classList.add('hidden');
+        }
+      });
+    }
+
+    // MongoDB Eviction Simulator Update
+    function updateEvictionSim(val) {
+      document.getElementById('dirty-val').innerText = val + '%';
+      const statusBox = document.getElementById('eviction-status-box');
+      const modeEl = document.getElementById('eviction-mode');
+      const latEl = document.getElementById('latency-val');
+      const descEl = document.getElementById('eviction-desc');
+
+      if (val < 20) {
+        statusBox.className = "p-3 bg-slate-800 rounded-lg border border-slate-700 text-xs space-y-1";
+        modeEl.className = "font-bold text-emerald-400";
+        modeEl.innerText = "Chế độ: Passive Eviction (Bình thường)";
+        latEl.innerText = "P99 Latency: ~8 ms";
+        descEl.innerText = "Các luồng nền âm thầm dọn dẹp bộ nhớ đệm. Tác động tới API không đáng kể.";
+      } else if (val >= 20 && val < 95) {
+        statusBox.className = "p-3 bg-amber-950/80 rounded-lg border border-amber-600 text-xs space-y-1";
+        modeEl.className = "font-bold text-amber-400";
+        modeEl.innerText = "⚠️ Chế độ: Aggressive Eviction (Cảnh báo nghẽn!)";
+        latEl.innerText = "P99 Latency: ~900 ms";
+        descEl.innerText = "Tỷ lệ Dirty bytes vượt 20%. Worker Threads của ứng dụng bị ÉP dừng công việc chính để nhảy vào tự dọn dẹp Cache!";
+      } else {
+        statusBox.className = "p-3 bg-red-950/90 rounded-lg border border-red-600 text-xs space-y-1";
+        modeEl.className = "font-bold text-red-400";
+        modeEl.innerText = "🚨 Chế độ: Emergency Eviction (Khóa Ghi)";
+        latEl.innerText = "P99 Latency: TIMEOUT (>5000 ms)";
+        descEl.innerText = "Cache quá tải vượt 95%. Toàn bộ luồng ghi bị KHÓA ĐỒNG BỘ hoàn toàn cho tới khi giải phóng đủ vùng nhớ trống!";
+      }
+    }
+
+    // Filterable Matrix Table
+    function renderMatrixTable(data) {
+      const tbody = document.getElementById('matrix-tbody');
+      tbody.innerHTML = '';
+
+      data.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50 transition";
+        tr.innerHTML = `
+          <td class="p-3 font-bold text-slate-800">
+            ${item.name}
+            <span class="block text-[10px] text-slate-500 font-normal">${item.version}</span>
+          </td>
+          <td class="p-3">
+            <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800 mb-1">${item.model}</span>
+            <span class="block text-[11px] text-slate-600 font-mono">${item.pacelc}</span>
+          </td>
+          <td class="p-3 text-slate-700 text-[11px]">${item.engine}</td>
+          <td class="p-3 text-slate-700 text-[11px]">${item.consistency}</td>
+          <td class="p-3 text-slate-700 text-[11px]">${item.latency}</td>
+          <td class="p-3 text-slate-800 font-medium text-[11px]">${item.sweetspot}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function filterMatrix() {
+      const query = document.getElementById('search-db').value.toLowerCase();
+      const model = document.getElementById('filter-model').value;
+      const pacelc = document.getElementById('filter-pacelc').value;
+
+      const filtered = dbMatrix.filter(item => {
+        const matchesSearch = item.name.toLowerCase().includes(query) || item.sweetspot.toLowerCase().includes(query);
+        const matchesModel = model === 'ALL' || item.model.includes(model);
+        const matchesPacelc = pacelc === 'ALL' || item.pacelc.includes(pacelc);
+        return matchesSearch && matchesModel && matchesPacelc;
+      });
+
+      renderMatrixTable(filtered);
+    }
+
+    // Quiz Decision Logic
+    function renderQuizStep() {
+      if (currentQuizStep >= quizQuestions.length) {
+        evaluateQuiz();
+        return;
+      }
+
+      const qData = quizQuestions[currentQuizStep];
+      document.getElementById('quiz-step-title').innerText = qData.title;
+      document.getElementById('quiz-question').innerText = qData.q;
+      document.getElementById('quiz-progress').style.width = ((currentQuizStep + 1) / quizQuestions.length * 100) + '%';
+
+      const optContainer = document.getElementById('quiz-options');
+      optContainer.innerHTML = '';
+
+      qData.options.forEach((opt, idx) => {
+        const btn = document.createElement('button');
+        btn.className = "p-3 text-left border rounded-lg hover:bg-indigo-50 hover:border-indigo-300 transition text-slate-700 flex justify-between items-center";
+        btn.innerHTML = `<span>${opt.text}</span><span class="text-indigo-600 font-bold">➔</span>`;
+        btn.onclick = () => {
+          quizAnswers.push(opt.type);
+          currentQuizStep++;
+          renderQuizStep();
+        };
+        optContainer.appendChild(btn);
+      });
+    }
+
+    function evaluateQuiz() {
+      document.getElementById('quiz-box').classList.add('hidden');
+      const resBox = document.getElementById('quiz-result');
+      resBox.classList.remove('hidden');
+
+      const modelAns = quizAnswers[0];
+      const consAns = quizAnswers[1];
+      const scaleAns = quizAnswers[2];
+
+      let recDb = "Apache Cassandra";
+      let rationale = "Dựa trên nhu cầu lưu trữ dữ liệu quy mô siêu lớn, băng thông ghi cao và khả năng mở rộng tuyến tính.";
+      let warning = "Cần quản lý chiến lược Compaction (nên dùng UCS ở v5.0+) và theo dõi dung lượng đĩa trống.";
+
+      if (modelAns === 'Document') {
+        if (scaleAns === 'SCALE_HMA' || quizAnswers[3] === 'CLOUD_MANAGED') {
+          recDb = "Azure Cosmos DB";
+          rationale = "Phù hợp hoàn hảo cho Document JSON phân tán toàn cầu, SLA <10ms, hỗ trợ 5 mức độ nhất quán linh hoạt.";
+          warning = "Chú ý quản lý chi phí Request Units (RUs) khi bật mức Strong Consistency.";
+        } else {
+          recDb = "MongoDB";
+          rationale = "Bộ máy WiredTiger B-Tree tối ưu cho dữ liệu Document đa hình, hỗ trợ truy vấn đa dạng và giao dịch ACID.";
+          warning = "Cấp phát bộ nhớ Cache đúng chuẩn (50% RAM chừa cho OS) để tránh hiện tượng Aggressive Eviction.";
+        }
+      } else if (modelAns === 'Key-Value') {
+        if (scaleAns === 'SCALE_RAM') {
+          recDb = "Redis";
+          rationale = "Tối ưu tốc độ Sub-millisecond trên bộ nhớ DRAM cho bộ đệm, quản lý phiên và bảng xếp hạng.";
+          warning = "Cân nhắc chi phí RAM khi dữ liệu vượt quá 50GB.";
+        } else {
+          recDb = "Aerospike";
+          rationale = "Kiến trúc HMA (Index RAM + NVMe SSD) cho phép xử lý hàng Terabytes Key-Value với độ trễ P99 <1ms và chi phí tối ưu.";
+          warning = "Bắt buộc sử dụng ổ NVMe SSD gắn trực tiếp và bật direct-io true.";
+        }
+      } else if (modelAns === 'Graph') {
+        if (scaleAns === 'SCALE_HIGH') {
+          recDb = "ArangoDB";
+          rationale = "Giải pháp SmartGraphs giúp phân mảnh đồ thị qua nhiều máy chủ mà vẫn duy trì tốc độ nối sâu 6-hop.";
+          warning = "Cần định nghĩa chuẩn thuộc tính SmartGraph attribute theo nghiệp vụ.";
+        } else {
+          recDb = "Neo4j";
+          rationale = "Native Graph Engine với nguyên lý Index-Free Adjacency cho phép duyệt mối quan hệ O(1) cực nhanh.";
+          warning = "Tránh chạy các câu truy vấn Cypher không giới hạn gây dừng thu gom rác (GC pauses) trên JVM.";
+        }
+      }
+
+      document.getElementById('result-db-name').innerText = recDb;
+      document.getElementById('result-rationale').innerText = rationale;
+      document.getElementById('result-warning').innerText = warning;
+    }
+
+    function resetQuiz() {
+      currentQuizStep = 0;
+      quizAnswers = [];
+      document.getElementById('quiz-result').classList.add('hidden');
+      document.getElementById('quiz-box').classList.remove('hidden');
+      renderQuizStep();
+    }
+
+    // TCO Calculator
+    function calculateTCO(gbVal) {
+      document.getElementById('tco-gb-label').innerText = gbVal + ' GB';
+
+      // Rough estimation model:
+      // Redis DRAM: $30/GB/year (hardware/cloud RAM cost)
+      // Aerospike HMA: Index DRAM (64B/record ~ 5% total) + NVMe SSD ($2/GB/year)
+      const redisCost = Math.round(gbVal * 30);
+      const aerospikeCost = Math.round((gbVal * 0.05 * 30) + (gbVal * 2.5));
+
+      tcoChartInst.data.datasets[0].data = [redisCost, aerospikeCost];
+      tcoChartInst.update();
+
+      const insight = document.getElementById('tco-insight');
+      const ratio = (redisCost / aerospikeCost).toFixed(1);
+      insight.innerText = `* Tại quy mô ${gbVal} GB, Aerospike HMA giúp tiết kiệm khoảng ${ratio}x chi phí hạ tầng so với Redis In-Memory thuần túy.`;
+    }
+  </script>
+</body>
+</html>

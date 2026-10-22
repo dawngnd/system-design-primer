@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="vi" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Khung Quyết Định & Tra Cứu Kiến Trúc Chuyên Sâu RDBMS</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            500: '#2563eb',
+                            600: '#1d4ed8',
+                            700: '#1e40af',
+                            900: '#0f172a'
+                        },
+                        neutralbg: '#f8fafc',
+                        surface: '#ffffff'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 650px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 320px;
+            max-height: 420px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 380px;
+            }
+        }
+        /* Custom Scrollbar for dense tables */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-neutralbg text-slate-800 font-sans antialiased min-h-screen flex flex-col">
+
+<!-- Chosen Palette: Warm Neutral Harmony (Background #f8fafc, White Surface, Slate/Blue Accents #1e40af, Teal/Amber Status Indicators) -->
+<!-- Application Structure Plan: 
+    The application transforms a dense 8-part academic RDBMS report into an interactive architectural decision framework.
+    1. Navigation Bar: Sticky navigation with jump links and quick execution metrics.
+    2. Executive Architectural Dashboard: High-level overview metrics & Interactive Decision Wizard (select workload -> get best RDBMS recommendation with rationale).
+    3. Deep-Dive Storage & Concurrency Visualizer: Interactive dynamic module illustrating Heap Table vs Clustered Index (IOT), LSM-Tree, and MVCC vs 2PL mechanics.
+    4. RDBMS Capability Benchmarks & Comparison Matrix: Dynamic Radar Charts, PostgreSQL 17 performance comparison, and fully searchable/filterable master matrix table.
+    5. License Economics & TCO Calculator: Interactive Oracle Core Factor License Calculator & CockroachDB policy shift risk inspector.
+    6. Production Failure Modes & Mitigation Matrix: Filterable incident drill-down by severity (P1 Wraparound, P2 Desync/WAL, P3 Connection Avalanche).
+    7. Best Practices & Migration Playbook: Primary Key strategy guide, PG17 tuning parameter checklist, and interactive migration flow maps.
+    This user journey flows logically from immediate decision-making to deep technical verification and operational execution. -->
+<!-- Visualization & Content Choices: 
+    - Interactive Decision Engine: Pure JS conditional logic -> Recommends DBs based on scale, workload, and licensing.
+    - Capacity & Attribute Comparison: Chart.js Radar Chart -> Visualizes multi-dimensional strengths of 5 key RDBMS.
+    - PostgreSQL 17 Performance Gains: Chart.js Bar Chart -> Displays Vacuum memory reduction & Sequential scan speedups.
+    - Oracle License Calculator: JS math implementation -> Converts physical cores & CPU architecture into license costs and OCPU equivalents.
+    - Heap vs IOT Visualizer: Dynamic HTML DOM manipulation -> Shows row lookup paths for ctid vs B-tree traversal without SVG.
+    - Searchable Matrix Table: JS filter on raw JSON data -> Supports quick comparison across all 8 RDBMS systems.
+    - Confirmation: NO SVG graphics used. NO Mermaid JS used. Standard Unicode / CSS indicators used. -->
+<!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <!-- Top Navigation Header -->
+    <header class="bg-slate-900 text-white sticky top-0 z-50 shadow-md border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center space-x-3">
+                    <span class="text-2xl font-bold tracking-tight text-blue-400">RDBMS<span class="text-white">Hub</span></span>
+                    <span class="bg-blue-900/60 text-blue-300 text-xs px-2.5 py-1 rounded-full border border-blue-700/50 font-mono">Báo Cáo Chuyên Sâu 2026</span>
+                </div>
+                <nav class="hidden md:flex space-x-6 text-sm font-medium">
+                    <a href="#decision-engine" class="text-slate-300 hover:text-white transition">Bộ Lọc Lựa Chọn</a>
+                    <a href="#architecture-deepdive" class="text-slate-300 hover:text-white transition">Kiến Trúc Cốt Lõi</a>
+                    <a href="#comparison-matrix" class="text-slate-300 hover:text-white transition">Ma Trận So Sánh</a>
+                    <a href="#licensing-calculator" class="text-slate-300 hover:text-white transition">Kinh Tế Bản Quyền</a>
+                    <a href="#failure-modes" class="text-slate-300 hover:text-white transition">Sự Cố Production</a>
+                    <a href="#best-practices" class="text-slate-300 hover:text-white transition">Best Practices</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12">
+
+        <!-- SECTION 1: EXECUTIVE OVERVIEW & INTERACTIVE DECISION ENGINE -->
+        <section id="decision-engine" class="space-y-6">
+            <div class="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-slate-200">
+                <div class="border-b border-slate-100 pb-4 mb-6">
+                    <h1 class="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
+                        Tổng Quan Hệ Sinh Thái RDBMS & Khung Quyết Định Kiến Trúc
+                    </h1>
+                    <p class="mt-2 text-slate-600 leading-relaxed">
+                        Phần này cung cấp cái nhìn tổng thể về 8 hệ quản trị cơ sở dữ liệu quan hệ (RDBMS) hàng đầu cùng công cụ tương tác giúp kiến trúc sư hệ thống đưa ra quyết định lựa chọn dựa trên 5 tham số kỹ thuật cốt lõi: Tải công việc (Workload), Số lượng kết nối (Concurrency), Mô hình lưu trữ, Giấy phép và Quy mô phân tán.
+                    </p>
+                </div>
+
+                <!-- High-level Metric Cards -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200/80">
+                        <div class="text-xs font-semibold uppercase text-slate-500 tracking-wider">Thị Phần Open-Source</div>
+                        <div class="text-2xl font-black text-blue-600 mt-1">52% / 48%</div>
+                        <div class="text-xs text-slate-500 mt-1">MySQL vs MariaDB (2026 Report)</div>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200/80">
+                        <div class="text-xs font-semibold uppercase text-slate-500 tracking-wider">Mô Hình Đa DB</div>
+                        <div class="text-2xl font-black text-indigo-600 mt-1">81%</div>
+                        <div class="text-xs text-slate-500 mt-1">Tổ chức vận hành đồng thời 2+ RDBMS</div>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200/80">
+                        <div class="text-xs font-semibold uppercase text-slate-500 tracking-wider">Tối Ưu Hóa Bộ Nhớ Vacuum</div>
+                        <div class="text-2xl font-black text-emerald-600 mt-1">20x</div>
+                        <div class="text-xs text-slate-500 mt-1">Tiết kiệm RAM trên PostgreSQL 17</div>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200/80">
+                        <div class="text-xs font-semibold uppercase text-slate-500 tracking-wider">Tiết Kiệm Bản Quyền CPU</div>
+                        <div class="text-2xl font-black text-amber-600 mt-1">-75%</div>
+                        <div class="text-xs text-slate-500 mt-1">Chi phí Oracle EE khi dùng ARM Ampere</div>
+                    </div>
+                </div>
+
+                <!-- Interactive Decision Wizard Container -->
+                <div class="bg-slate-900 text-white rounded-xl p-6 shadow-inner">
+                    <div class="flex items-center space-x-2 mb-4">
+                        <span class="text-yellow-400 text-xl">⚡</span>
+                        <h2 class="text-lg font-bold">Bộ Máy Khung Quyết Định Lựa Chọn RDBMS (Architectural Decision Engine)</h2>
+                    </div>
+                    <p class="text-xs text-slate-300 mb-6">Chọn các tiêu chí hệ thống của bạn bên dưới để nhận khuyến nghị kiến trúc RDBMS tối ưu nhất đi kèm phân tích ưu/nhược điểm và rủi ro vận hành.</p>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 mb-2">1. Đặc Trưng Tải Công Việc (Workload)</label>
+                            <select id="select-workload" onchange="runDecisionEngine()" class="w-full bg-slate-800 border border-slate-700 text-white rounded-lg p-2.5 text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                                <option value="oltp-general">OLAP/OLTP Hỗn Hợp, Spatial, AI Vector, JSON</option>
+                                <option value="oltp-fastkey">OLTP Web Đọc Cao, Tra Cứu Khóa Chính Simplicity</option>
+                                <option value="htap-logs">HTAP, Log/Time-Series Nén Cao SSD, Enterprise Migration</option>
+                                <option value="embedded">Thiết Bị Nhúng, Di Động, Desktop, Edge Node</option>
+                                <option value="enterprise-core">Core Banking, ERP Tập Đoàn, PureScale Shared-Disk</option>
+                                <option value="distributed-global">Giao Dịch Toàn Cầu Đa Vùng (Multi-Region Active-Active)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 mb-2">2. Kết Nối Đồng Thời (Concurrency)</label>
+                            <select id="select-concurrency" onchange="runDecisionEngine()" class="w-full bg-slate-800 border border-slate-700 text-white rounded-lg p-2.5 text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                                <option value="low">Thấp (&lt; 100 kết nối đồng thời)</option>
+                                <option value="medium">Vừa (100 - 5,000 kết nối)</option>
+                                <option value="extreme">Cực Cao (&gt; 100,000 kết nối)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 mb-2">3. Giới Hạn Giấy Phép & Chi Phí</label>
+                            <select id="select-license" onchange="runDecisionEngine()" class="w-full bg-slate-800 border border-slate-700 text-white rounded-lg p-2.5 text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                                <option value="open-source">Mã Nguồn Mở Tự Do (Liberal Open-Source / GPL)</option>
+                                <option value="commercial-enterprise">Sẵn Sàng Chi Trả Thương Mại Doanh Nghiệp</option>
+                                <option value="no-telemetry">Mã Nguồn Mở Không Ràng Buộc Telemetry/Doanh Thu</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 mb-2">4. Chiến Lược Cấu Trúc Khóa Chính</label>
+                            <select id="select-pk" onchange="runDecisionEngine()" class="w-full bg-slate-800 border border-slate-700 text-white rounded-lg p-2.5 text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                                <option value="uuid-flexible">Khóa UUID / Thay Đổi Thuộc Tính Thường Xuyên</option>
+                                <option value="auto-inc">Số Nguyên Tăng Tuần Tự (AUTO_INCREMENT / Sequence)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Decision Result Card -->
+                    <div id="decision-result-card" class="bg-slate-800/90 border border-blue-500/40 rounded-xl p-5 text-slate-100 transition-all">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 2: CORE DESIGN PHILOSOPHIES & INTERNAL MECHANICS -->
+        <section id="architecture-deepdive" class="space-y-6">
+            <div class="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-slate-200">
+                <div class="border-b border-slate-100 pb-4 mb-6">
+                    <h2 class="text-xl md:text-2xl font-bold text-slate-900">
+                        Triết Lý Thiết Kế Cốt Lõi: Lưu Trữ Vật Lý & Thuật Toán Điều Khiển
+                    </h2>
+                    <p class="mt-2 text-slate-600 text-sm leading-relaxed">
+                        Mọi RDBMS đều phải giải quyết 5 bài toán vật lý: sắp xếp byte trên đĩa, cấu trúc trang (page layout), thuật toán tìm kiếm dòng, điều khiển đồng thời (2PL vs MVCC) và bộ tối ưu hóa truy vấn dựa trên chi phí (CBO). Sự lựa chọn giữa Heap Table và Index-Organized Table (IOT) quyết định trực tiếp đến hành vi I/O và hiệu năng ứng dụng.
+                    </p>
+                </div>
+
+                <!-- Interactive Storage Engine Mechanics Visualizer -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                    <!-- Control Side -->
+                    <div class="lg:col-span-5 space-y-4">
+                        <div class="bg-slate-50 p-5 rounded-xl border border-slate-200">
+                            <h3 class="text-sm font-bold text-slate-900 mb-3 flex items-center space-x-2">
+                                <span>🛠️</span>
+                                <span>Mô Phỏng Luồng Tìm Kiếm Dòng Dữ Liệu</span>
+                            </h3>
+                            <p class="text-xs text-slate-600 mb-4">
+                                Chọn loại cấu trúc bảng để trực quan hóa sự khác biệt trong thuật toán tìm kiếm điểm (point lookup) qua chỉ mục phụ:
+                            </p>
+                            
+                            <div class="space-y-2">
+                                <button onclick="setVisualizerMode('heap')" id="btn-mode-heap" class="w-full text-left p-3 rounded-lg border text-xs font-medium transition flex items-center justify-between bg-blue-50 border-blue-300 text-blue-900">
+                                    <div>
+                                        <div class="font-bold">Heap Table (PostgreSQL, Oracle)</div>
+                                        <div class="text-[11px] text-blue-700">Chỉ mục phụ trỏ trực tiếp ctid (1 B-Tree + 1 Hop Heap)</div>
+                                    </div>
+                                    <span class="text-lg">📌</span>
+                                </button>
+                                <button onclick="setVisualizerMode('iot')" id="btn-mode-iot" class="w-full text-left p-3 rounded-lg border text-xs font-medium transition flex items-center justify-between bg-white border-slate-200 text-slate-700 hover:bg-slate-100">
+                                    <div>
+                                        <div class="font-bold">Index-Organized Table / Clustered Index (MySQL InnoDB, SQLite)</div>
+                                        <div class="text-[11px] text-slate-500">Chỉ mục phụ lưu Khóa Chính (2 B-Tree Hops)</div>
+                                    </div>
+                                    <span class="text-lg">🌳</span>
+                                </button>
+                                <button onclick="setVisualizerMode('lsm')" id="btn-mode-lsm" class="w-full text-left p-3 rounded-lg border text-xs font-medium transition flex items-center justify-between bg-white border-slate-200 text-slate-700 hover:bg-slate-100">
+                                    <div>
+                                        <div class="font-bold">LSM-Tree (MariaDB MyRocks / RocksDB)</div>
+                                        <div class="text-[11px] text-slate-500">Ghi tuần tự MemTable -> SSTables (Tăng tốc ghi SSD)</div>
+                                    </div>
+                                    <span class="text-lg">⚡</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Technical Explanation Card -->
+                        <div id="visualizer-explain" class="bg-amber-50/60 border border-amber-200/80 p-4 rounded-xl text-xs text-slate-700 space-y-2">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Visual Interactive Canvas View (HTML/CSS Based Diagram) -->
+                    <div class="lg:col-span-7 bg-slate-900 text-white p-6 rounded-xl border border-slate-800 min-h-[380px] flex flex-col justify-between">
+                        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                            <span id="diagram-title" class="font-bold text-sm text-blue-400">Heap Table Diagram</span>
+                            <span class="text-xs bg-slate-800 text-slate-300 px-2.5 py-1 rounded">Không theo thứ tự vật lý</span>
+                        </div>
+
+                        <div id="diagram-canvas" class="my-auto py-4 space-y-6">
+                            <!-- Populated dynamically via JS DOM manipulation -->
+                        </div>
+
+                        <div class="text-[11px] text-slate-400 border-t border-slate-800 pt-3 flex justify-between items-center">
+                            <span>*Mọi thao tác đọc/ghi đều đi qua Bộ Đệm shared_buffers / Buffer Pool</span>
+                            <span class="text-blue-400 font-mono">Page Size: 8KB (PG) / 16KB (MySQL)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Architectural Sub-topic Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+                    <div class="bg-slate-50 p-5 rounded-xl border border-slate-200">
+                        <div class="text-blue-600 font-bold text-sm mb-2 flex items-center space-x-2">
+                            <span>🔒</span>
+                            <span>Đồng Thời: 2PL vs MVCC</span>
+                        </div>
+                        <p class="text-xs text-slate-600 leading-relaxed">
+                            <strong class="text-slate-900">Strict 2PL</strong> (MySQL InnoDB Gap locks) chặn triệt để đọc/ghi để chống Phantom Inserts nhưng dễ gây nghẽn. <strong class="text-slate-900">MVCC</strong> (PostgreSQL Append-only Heap vs InnoDB Undo Logs) giúp đọc không chặn ghi. PostgreSQL triển khai <strong class="text-slate-900">SSI</strong> để đạt mức Serializable mà không dùng khóa dải.
+                        </p>
+                    </div>
+
+                    <div class="bg-slate-50 p-5 rounded-xl border border-slate-200">
+                        <div class="text-indigo-600 font-bold text-sm mb-2 flex items-center space-x-2">
+                            <span>📊</span>
+                            <span>Columnstore & SIMD/AVX-512</span>
+                        </div>
+                        <p class="text-xs text-slate-600 leading-relaxed">
+                            Đối với truy vấn phân tích OLAP, các engine như <strong class="text-slate-900">SQL Server Columnstore, MariaDB ColumnStore, Oracle HeatWave</strong> gom dữ liệu theo cột, nén cao và sử dụng tập lệnh <strong class="text-slate-900">SIMD / AVX-512</strong> tính toán song song vector hóa trực tiếp trên CPU.
+                        </p>
+                    </div>
+
+                    <div class="bg-slate-50 p-5 rounded-xl border border-slate-200">
+                        <div class="text-emerald-600 font-bold text-sm mb-2 flex items-center space-x-2">
+                            <span>🚀</span>
+                            <span>Nâng Cấp Bộ Tối Ưu PostgreSQL 17</span>
+                        </div>
+                        <p class="text-xs text-slate-600 leading-relaxed">
+                            PostgreSQL 17 phá bỏ rào cản CTE Materialized (truyền thống kê ra ngoài), tự động biến đổi <strong class="text-slate-900">correlated IN subqueries</strong> thành JOINs, tích hợp <strong class="text-slate-900">Read Stream API (Streaming I/O)</strong> và tối ưu hóa duyệt cây B-tree cho mệnh đề IN đa giá trị.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 3: COMPARISON MATRICES & DATA VISUALIZATIONS -->
+        <section id="comparison-matrix" class="space-y-6">
+            <div class="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-slate-200">
+                <div class="border-b border-slate-100 pb-4 mb-6">
+                    <h2 class="text-xl md:text-2xl font-bold text-slate-900">
+                        Bảng Ma Trận So Sánh Toàn Diện & Đồ Thị Đánh Giá Năng Lực
+                    </h2>
+                    <p class="mt-2 text-slate-600 text-sm leading-relaxed">
+                        Phần này trực quan hóa năng lực đa chiều giữa các RDBMS cốt lõi và cung cấp bảng tra cứu bộ thông số kỹ thuật chi tiết có thể tìm kiếm và lọc theo phân loại kiến trúc.
+                    </p>
+                </div>
+
+                <!-- Visual Charts Grid -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                    <!-- Chart 1: Capability Radar -->
+                    <div class="bg-slate-50 p-5 rounded-xl border border-slate-200 flex flex-col justify-between">
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-900 mb-1">So Sánh Năng Lực Đa Chiều (RDBMS Capability Profile)</h3>
+                            <p class="text-xs text-slate-500 mb-4">Đánh giá điểm số kiến trúc trên thang 100 dựa trên kết quả nghiên cứu.</p>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="radarCapabilityChart"></canvas>
+                        </div>
+                        <div class="text-[11px] text-slate-500 text-center mt-2">
+                            *Tải công việc phức tạp & GIS chọn PG 17; Tải đọc khóa chính chọn MySQL/MariaDB; Nhúng chọn SQLite.
+                        </div>
+                    </div>
+
+                    <!-- Chart 2: PostgreSQL 17 Performance Gains -->
+                    <div class="bg-slate-50 p-5 rounded-xl border border-slate-200 flex flex-col justify-between">
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-900 mb-1">Đột Phá Hiệu Năng PostgreSQL 17 vs PostgreSQL 16</h3>
+                            <p class="text-xs text-slate-500 mb-4">So sánh thời gian thực thi (giây) & mức tiêu thụ tài nguyên bộ nhớ nội bộ.</p>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="pg17BenchmarkChart"></canvas>
+                        </div>
+                        <div class="text-[11px] text-slate-500 text-center mt-2">
+                            *Dữ liệu đo lường từ benchmark Sequential Scan song song & Quản lý bộ nhớ VACUUM trên PG 17.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dynamic Filterable Master Matrix Table -->
+                <div class="space-y-4">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-100 p-4 rounded-xl">
+                        <div class="flex items-center space-x-2 w-full sm:w-auto">
+                            <span class="text-slate-500 text-xs font-bold uppercase">Lọc Nhóm:</span>
+                            <select id="table-category-filter" onchange="filterMasterTable()" class="bg-white border border-slate-300 text-slate-800 text-xs rounded-lg p-2 font-medium focus:ring-2 focus:ring-blue-500 outline-none">
+                                <option value="all">Tất Cả 8 Hệ Quản Trị (All Categories)</option>
+                                <option value="open-source">Mã Nguồn Mở Truyền Thống & Mở Rộng</option>
+                                <option value="enterprise">Thương Mại Doanh Nghiệp (Enterprise Commercial)</option>
+                                <option value="embedded">Nhúng Không Máy Chủ (Serverless Embedded)</option>
+                                <option value="distributed">Distributed SQL / NewSQL</option>
+                            </select>
+                        </div>
+                        <div class="w-full sm:w-64">
+                            <input type="text" id="table-search-input" onkeyup="filterMasterTable()" placeholder="🔍 Tìm tính năng (ví dụ: MVCC, WAL, JSON...)..." class="w-full bg-white border border-slate-300 text-slate-800 text-xs rounded-lg p-2 outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+
+                    <!-- Scrollable Table Container -->
+                    <div class="overflow-x-auto rounded-xl border border-slate-200 shadow-sm">
+                        <table class="w-full text-left text-xs border-collapse">
+                            <thead class="bg-slate-900 text-white font-semibold uppercase tracking-wider">
+                                <tr>
+                                    <th class="p-3 border-b border-slate-800 min-w-[140px]">Hệ Quản Trị</th>
+                                    <th class="p-3 border-b border-slate-800 min-w-[150px]">Cấu Trúc Bảng Vật Lý</th>
+                                    <th class="p-3 border-b border-slate-800 min-w-[160px]">Storage Engine Phụ Trợ</th>
+                                    <th class="p-3 border-b border-slate-800 min-w-[170px]">MVCC & Cơ Chế Khóa</th>
+                                    <th class="p-3 border-b border-slate-800 min-w-[150px]">Quản Lý Kết Nối/RAM</th>
+                                    <th class="p-3 border-b border-slate-800 min-w-[160px]">Tối Ưu Hóa Query</th>
+                                    <th class="p-3 border-b border-slate-800 min-w-[160px]">Xử Lý JSON & DataType</th>
+                                    <th class="p-3 border-b border-slate-800 min-w-[140px]">Giấy Phép (License)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="master-table-body" class="divide-y divide-slate-200 bg-white">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 4: LICENSE ECONOMICS, TCO & GOVERNANCE RISKS -->
+        <section id="licensing-calculator" class="space-y-6">
+            <div class="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-slate-200">
+                <div class="border-b border-slate-100 pb-4 mb-6">
+                    <h2 class="text-xl md:text-2xl font-bold text-slate-900">
+                        Bài Toán Kinh Tế Bản Quyền (TCO) & Rủi Ro Pháp Lý
+                    </h2>
+                    <p class="mt-2 text-slate-600 text-sm leading-relaxed">
+                        Quyết định chọn phần cứng vật lý và mô hình ảo hóa có thể thay đổi chi phí bản quyền RDBMS lên tới hàng triệu USD. Phần này phân tích Bảng Hệ Số Nhân Lõi (Core Factor) của Oracle và rủi ro từ làn sóng đóng mã nguồn của CockroachDB.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    <!-- Oracle Calculator Interactive Tool -->
+                    <div class="lg:col-span-7 bg-slate-900 text-white p-6 rounded-xl border border-slate-800 flex flex-col justify-between space-y-6">
+                        <div>
+                            <div class="flex items-center space-x-2 mb-2">
+                                <span class="text-amber-400 text-xl">🧮</span>
+                                <h3 class="text-base font-bold text-white">Công Cụ Tính Giấy Phép Oracle Processor Core Factor (2025/2026)</h3>
+                            </div>
+                            <p class="text-xs text-slate-300">
+                                Công thức: <span class="font-mono text-amber-300">Required Licenses = ⌈Tổng Số Lõi Vật Lý × Core Factor⌉</span>
+                            </p>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 mb-1">Tổng Số Lõi Vật Lý (Physical Cores)</label>
+                                <input type="number" id="input-oracle-cores" value="64" min="1" max="1024" oninput="calculateOracleCost()" class="w-full bg-slate-800 border border-slate-700 text-amber-300 font-bold rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-amber-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 mb-1">Kiến Trúc Vi Xử Lý (CPU Architecture)</label>
+                                <select id="select-oracle-arch" onchange="calculateOracleCost()" class="w-full bg-slate-800 border border-slate-700 text-white rounded-lg p-2.5 text-xs outline-none focus:ring-2 focus:ring-amber-500">
+                                    <option value="0.25">ARM Ampere Altra / AltraMax (Factor 0.25)</option>
+                                    <option value="0.5" selected>x86 Intel Xeon / AMD EPYC (Factor 0.50)</option>
+                                    <option value="1.0">IBM Power10 / Power9 (Factor 1.00)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Calculation Output Result -->
+                        <div id="oracle-calc-result" class="bg-slate-800 p-4 rounded-lg border border-slate-700 space-y-3 text-xs">
+                            <!-- Populated by JS -->
+                        </div>
+
+                        <div class="text-[11px] text-amber-200/70 bg-amber-950/40 p-3 rounded border border-amber-800/40">
+                            ⚠️ <strong>Cảnh Báo Kiểm Toán VMware/Hyper-V:</strong> Oracle không công nhận phân vùng mềm (soft partitioning). Quản trị viên buộc phải mua bản quyền cho TOÀN BỘ tất cả các lõi vật lý trên mọi máy chủ thuộc cùng cụm vCenter!
+                        </div>
+                    </div>
+
+                    <!-- CockroachDB Licensing Shift Analysis Card -->
+                    <div class="lg:col-span-5 bg-slate-50 p-6 rounded-xl border border-slate-200 space-y-4">
+                        <div class="flex items-center space-x-2 text-rose-700 font-bold text-base">
+                            <span>🛡️</span>
+                            <h3>Rào Cản Pháp Lý CockroachDB Enterprise (2024+)</h3>
+                        </div>
+                        <p class="text-xs text-slate-600 leading-relaxed">
+                            Từ tháng 11/2024 (phiên bản 24.3+), Cockroach Labs chính thức khai tử phiên bản miễn phí CockroachDB Core, hợp nhất thành mô hình <strong class="text-slate-900">CockroachDB Enterprise</strong> duy nhất với các điều kiện khắt khe:
+                        </p>
+
+                        <ul class="space-y-2 text-xs text-slate-700">
+                            <li class="flex items-start space-x-2">
+                                <span class="text-rose-600 font-bold">1.</span>
+                                <span><strong>Trần Doanh Thu $10M:</strong> Gói Enterprise Free chỉ dành cho tổ chức có doanh thu gộp (bao gồm công ty mẹ và liên kết) dưới 10 triệu USD/năm.</span>
+                            </li>
+                            <li class="flex items-start space-x-2">
+                                <span class="text-rose-600 font-bold">2.</span>
+                                <span><strong>Bắt Buộc Bật Telemetry:</strong> Cụm cơ sở dữ liệu phải gửi telemetry liên tục về máy chủ hãng. Nếu ngắt kết nối quá 7 ngày, hệ thống sẽ tự động bị <strong class="text-rose-700">Throttled (bóp hiệu năng)</strong>.</span>
+                            </li>
+                            <li class="flex items-start space-x-2">
+                                <span class="text-rose-600 font-bold">3.</span>
+                                <span><strong>Nguy cơ Tuân Thủ Ngân Hàng/Y Tế:</strong> Các tổ chức tài chính/y tế không được phép phát dữ liệu telemetry ra ngoài buộc phải chuyển hướng về PostgreSQL + Citus hoặc MariaDB Galera.</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 5: PRODUCTION FAILURE MODES & MITIGATION -->
+        <section id="failure-modes" class="space-y-6">
+            <div class="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-slate-200">
+                <div class="border-b border-slate-100 pb-4 mb-6">
+                    <h2 class="text-xl md:text-2xl font-bold text-slate-900">
+                        Chế Độ Lỗi Nghiêm Trọng Trong Môi Trường Sản Xuất (Production Failure Modes)
+                    </h2>
+                    <p class="mt-2 text-slate-600 text-sm leading-relaxed">
+                        Phân tích giải phẫu các kịch bản sập hệ thống thực tế khi vận hành ở quy mô lớn, kèm theo cơ chế khởi phát nội bộ và chốt chặn phòng vệ được kiểm chứng bởi Kỹ thuật Vận hành Cơ sở Dữ liệu (DBRE).
+                    </p>
+                </div>
+
+                <!-- Severity Filter Buttons -->
+                <div class="flex space-x-2 mb-4">
+                    <button onclick="filterFailureModes('all')" id="btn-fail-all" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 text-white">Tất Cả Mức Độ</button>
+                    <button onclick="filterFailureModes('P1')" id="btn-fail-p1" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-100 text-rose-800 hover:bg-rose-200">Critical P1</button>
+                    <button onclick="filterFailureModes('P2')" id="btn-fail-p2" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-100 text-amber-800 hover:bg-amber-200">High P2</button>
+                    <button onclick="filterFailureModes('P3')" id="btn-fail-p3" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-100 text-blue-800 hover:bg-blue-200">Medium P3</button>
+                </div>
+
+                <!-- Failure Modes Grid Container -->
+                <div id="failure-modes-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 6: BEST PRACTICES & MIGRATION PLAYBOOK -->
+        <section id="best-practices" class="space-y-6">
+            <div class="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-slate-200">
+                <div class="border-b border-slate-100 pb-4 mb-6">
+                    <h2 class="text-xl md:text-2xl font-bold text-slate-900">
+                        Best Practices: Tinh Chỉnh Hệ Thống & Chiến Lược Chuyển Đổi (Migration)
+                    </h2>
+                    <p class="mt-2 text-slate-600 text-sm leading-relaxed">
+                        Quy chuẩn thiết kế lược đồ khóa chính, danh mục tinh chỉnh tham số bộ nhớ PostgreSQL 17 và lộ trình chuyển đổi không thời gian chết (Zero-Downtime Migration).
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Tab 1: Primary Key Strategy -->
+                    <div class="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-3">
+                        <div class="font-bold text-sm text-slate-900 flex items-center space-x-2">
+                            <span class="text-blue-600">🔑</span>
+                            <span>Chiến Lược Khóa Chính (Primary Key)</span>
+                        </div>
+                        <div class="text-xs text-slate-600 space-y-2 leading-relaxed">
+                            <p><strong class="text-slate-900">Trên IOT / Clustered Index (MySQL, SQLite):</strong> Khóa chính PHẢI nhỏ gọn, tăng tuần tự (ví dụ: <code class="bg-slate-200 px-1 rounded">BIGINT AUTO_INCREMENT</code>). Tuyệt đối tránh dùng UUIDv4 chuỗi dài 36 ký tự làm PK vì sẽ làm phình mọi nút lá chỉ mục phụ và gây phân tách trang (page split) liên tục.</p>
+                            <p><strong class="text-slate-900">Trên Heap Table (PostgreSQL):</strong> Khóa chính và chỉ mục phụ đối xứng hoàn toàn. Có thể thoải mái dùng kiểu <code class="bg-slate-200 px-1 rounded">UUID</code> nguyên bản hoặc UUIDv7 tăng dần theo thời gian mà không lo suy giảm tốc độ chèn Heap.</p>
+                        </div>
+                    </div>
+
+                    <!-- Tab 2: PG 17 Tuning Checklist -->
+                    <div class="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-3">
+                        <div class="font-bold text-sm text-slate-900 flex items-center space-x-2">
+                            <span class="text-emerald-600">⚙️</span>
+                            <span>Tinh Chỉnh Bộ Nhớ PostgreSQL 17</span>
+                        </div>
+                        <ul class="text-xs text-slate-600 space-y-1.5 font-mono">
+                            <li>• <strong>shared_buffers:</strong> 25%-40% tổng RAM hệ thống.</li>
+                            <li>• <strong>work_mem:</strong> 4MB-16MB cho mỗi kết nối. Đo qua EXPLAIN (MEMORY, SERIALIZE).</li>
+                            <li>• <strong>maintenance_work_mem:</strong> Tăng lên 2GB+ (PG 17 bỏ giới hạn ngầm 1GB của Vacuum).</li>
+                            <li>• <strong>vacuum_buffer_usage_limit:</strong> Mặc định 2MB trên PG 17 giúp tăng tốc dọn rác.</li>
+                            <li>• <strong>sslnegotiation=direct:</strong> Bắt tay TLS trực tiếp giảm 1 round-trip.</li>
+                        </ul>
+                    </div>
+
+                    <!-- Tab 3: Migration Playbook -->
+                    <div class="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-3">
+                        <div class="font-bold text-sm text-slate-900 flex items-center space-x-2">
+                            <span class="text-indigo-600">🔄</span>
+                            <span>Lộ Trình Chuyển Đổi Dữ Liệu</span>
+                        </div>
+                        <div class="text-xs text-slate-600 space-y-2 leading-relaxed">
+                            <p><strong class="text-slate-900">Oracle -&gt; MariaDB:</strong> Nhờ tính năng <code class="bg-slate-200 px-1 rounded">SET SQL_MODE='ORACLE';</code>, MariaDB thực thi trực tiếp cú pháp PL/SQL, Sequence và <code class="bg-slate-200 px-1 rounded">CREATE OR REPLACE PROCEDURE</code> mà không cần viết lại mã nguồn thủ tục.</p>
+                            <p><strong class="text-slate-900">MySQL -&gt; PostgreSQL:</strong> Dùng <code class="bg-slate-200 px-1 rounded">pgloader</code> cho kịch bản 1 lần hoặc <strong class="text-slate-900">Debezium CDC</strong> cho chuyển đổi Zero-Downtime. PostgreSQL 17 sử dụng <code class="bg-slate-200 px-1 rounded">pg_createsubscriber</code> để chuyển physical standby thành logical subscriber nhanh chóng.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 text-slate-400 text-xs py-8 border-t border-slate-800 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div>
+                <p class="font-semibold text-slate-200">Khung Quyết Định Lựa Chọn RDBMS - Báo Cáo Nghiên Cứu Chuyên Sâu 2026</p>
+                <p class="mt-1 text-slate-500">Phân tích toàn diện PostgreSQL 17, MySQL 8.4 LTS, MariaDB 11.x, SQLite, Oracle, SQL Server, IBM Db2 & CockroachDB.</p>
+            </div>
+            <div class="text-right text-slate-500">
+                <p>Nền tảng HTML Single-Page Application (SPA) Tương Tác</p>
+                <p class="text-[11px] mt-0.5">Không sử dụng đồ họa SVG hoặc Mermaid JS | Chuẩn Tailwind & Chart.js Canvas</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JAVASCRIPT LOGIC ENGINE -->
+    <script>
+        // MASTER RDBMS DATA MATRIX
+        const rdbmsData = [
+            {
+                id: 'postgres',
+                name: 'PostgreSQL (17)',
+                category: 'open-source',
+                phy_structure: 'Heap Table (ctid offset)',
+                storage_engine: 'Extensions (PostGIS, pg_vector, Timescale, Citus)',
+                mvcc_locking: 'Append-only Heap, VACUUM, SSI (Serializable Snapshot Isolation)',
+                conn_mem: 'Process-per-connection, shared_buffers (25-40% RAM)',
+                optimizer: 'CBO siêu mạnh, Parallel Scan, JIT, Streaming I/O API (PG17)',
+                json_type: 'JSONB nhị phân + GIN Index, JSON_TABLE (PG17), Arrays, Ranges',
+                license: 'Liberal Open Source (Tự do 100%)'
+            },
+            {
+                id: 'mysql',
+                name: 'MySQL (8.4 LTS)',
+                category: 'open-source',
+                phy_structure: 'Clustered B+-Tree (InnoDB IOT)',
+                storage_engine: 'InnoDB cốt lõi (CSV, MyISAM, Federated phụ)',
+                mvcc_locking: 'MVCC + Strict 2PL (Shared, Exclusive, Gap, Intent Locks)',
+                conn_mem: 'Thread-per-connection (Thread Pool chỉ có ở bản trả phí Enterprise)',
+                optimizer: 'Tối ưu OLTP đơn giản, kém hơn ở phép Join đa bảng phức tạp',
+                json_type: 'Binary JSON + ->/->>, Cần Virtual Column để đánh B-tree index',
+                license: 'Dual License (GPL Community / Oracle Enterprise)'
+            },
+            {
+                id: 'mariadb',
+                name: 'MariaDB (11.4/11.8 LTS)',
+                category: 'open-source',
+                phy_structure: 'Clustered B+-Tree (InnoDB/Aria)',
+                storage_engine: 'Đa dạng: InnoDB, Aria, MyRocks (LSM-Tree), ColumnStore (OLAP)',
+                mvcc_locking: 'MVCC trên InnoDB/MyRocks, Galera Synchronous Replication',
+                conn_mem: 'Thread Pool Tích Hợp Miễn Phí (>200.000 kết nối đồng thời)',
+                optimizer: 'Cải tiến mạnh subqueries, View & ColumnStore OLAP',
+                json_type: 'LONGTEXT alias (Hàm chuỗi nhanh) + Dynamic Columns',
+                license: '100% GPL Open Source'
+            },
+            {
+                id: 'sqlite',
+                name: 'SQLite (3.x)',
+                category: 'embedded',
+                phy_structure: 'Table B-Tree (IOT) theo rowid',
+                storage_engine: 'Đơn Engine B-tree đóng gói trong 1 tệp nhị phân duy nhất',
+                mvcc_locking: 'Rollback Journal hoặc WAL Mode (1 luồng ghi WAL_WRITE_LOCK)',
+                conn_mem: 'In-Process Library (Gọi hàm C trực tiếp, 0 RAM mạng)',
+                optimizer: 'VDBE Bytecode VM compiler, Cost-Based Planner gọn nhẹ',
+                json_type: 'Dynamic Type System linh hoạt trên từng dòng',
+                license: 'Public Domain (Miễn phí hoàn toàn)'
+            },
+            {
+                id: 'oracle',
+                name: 'Oracle Database',
+                category: 'enterprise',
+                phy_structure: 'Heap Table (Mặc định) / IOT (ORGANIZATION INDEX)',
+                storage_engine: 'Enterprise Storage, Oracle HeatWave trên OCI',
+                mvcc_locking: 'Đọc nhất quán MVCC, Undo Segments',
+                conn_mem: 'Multi-Process / Multi-Threaded Architecture, PGA/SGA',
+                optimizer: 'CBO doanh nghiệp cực kỳ tinh vi',
+                json_type: 'Native JSON document store, Relational Dual Views',
+                license: 'Thương mại (Tính theo Core Factor 0.25 - 1.0 & NUP)'
+            },
+            {
+                id: 'sqlserver',
+                name: 'SQL Server (2022)',
+                category: 'enterprise',
+                phy_structure: 'Clustered Index (IOT) / Heap',
+                storage_engine: 'Tích hợp Columnstore, Memory-Optimized Tables',
+                mvcc_locking: 'Khóa kết hợp Phiên bản dòng (Snapshot Isolation)',
+                conn_mem: 'SQLOS thread scheduling, Buffer Pool Engine',
+                optimizer: 'Parameter Sensitive Plan (PSP) Optimization, Query Store',
+                json_type: 'JSON native functions, Spatial types',
+                license: 'Thương mại Enterprise / Standard'
+            },
+            {
+                id: 'db2',
+                name: 'IBM Db2 (11.5/12.1)',
+                category: 'enterprise',
+                phy_structure: 'Heap / Table Spaces + Columnar BLU',
+                storage_engine: 'BLU Acceleration, Native XML storage',
+                mvcc_locking: 'Lock Manager toàn cụm trên pureScale shared-disk',
+                conn_mem: 'Instance Memory, Dynamic Bufferpools (Community 12.1 limit 8GB)',
+                optimizer: 'AI-Powered Query Optimizer (từ v11.5)',
+                json_type: 'Native XML (XQuery) + JSON support',
+                license: 'Thương mại (Community free giới hạn 8GB RAM)'
+            },
+            {
+                id: 'cockroach',
+                name: 'CockroachDB (24.3+)',
+                category: 'distributed',
+                phy_structure: 'Distributed Shared-Nothing Key-Value',
+                storage_engine: 'Pebble (LSM-Tree dựa trên RocksDB)',
+                mvcc_locking: 'Raft / Paxos Consensus, SERIALIZABLE cô lập phân tán',
+                conn_mem: 'Distributed nodes coordination, Go runtime',
+                optimizer: 'Distributed Cascades Query Optimizer',
+                json_type: 'JSONB tương thích PostgreSQL, Spatial PostGIS',
+                license: 'Enterprise License (Yêu cầu Telemetry, Bóp sau 7 ngày)'
+            }
+        ];
+
+        // FAILURE MODES DATA
+        const failureModes = [
+            {
+                severity: 'P1',
+                rdbms: 'PostgreSQL',
+                title: 'Transaction ID Wraparound Catastrophic Lockout',
+                mech: 'Autovacuum không kịp đóng băng (freeze) các mã tuple xmin trước khi age(relfrozenxid) chạm ngưỡng 2 tỷ giao dịch.',
+                impact: 'Cơ sở dữ liệu tự động KHÓA CỨNG TOÀN BỘ QUYỀN GHI để chống hỏng dữ liệu, làm ngưng trệ toàn bộ hệ thống Production.',
+                mitigation: 'Giám sát age(relfrozenxid), giảm autovacuum_naptime, tăng autovacuum_vacuum_cost_limit riêng cho bảng chèn lớn.'
+            },
+            {
+                severity: 'P2',
+                rdbms: 'MySQL',
+                title: 'Replication Desynchronization via Non-Deterministic Statements',
+                mech: 'Sao chép bất đồng bộ (Statement-based) kết hợp câu lệnh không tất định (NOW(), UUID(), LIMIT không ORDER BY) khiến dữ liệu Replica bị lệch.',
+                impact: 'Dữ liệu đọc từ Replica bị sai lệch (data inconsistency) và mất dữ liệu khi failover.',
+                mitigation: 'Bắt buộc chuyển binlog_format = ROW và cân nhắc nâng cấp lên Galera Cluster (MariaDB) hoặc InnoDB Cluster.'
+            },
+            {
+                severity: 'P2',
+                rdbms: 'SQLite',
+                title: 'Single-Writer Lock Contention & Unbounded WAL Growth',
+                mech: 'Nhiều luồng ghi tranh chấp byte khóa WAL_WRITE_LOCK trong khi giao dịch đọc kéo dài ngăn cản tiến trình checkpoint cắt gọn .wal.',
+                impact: 'Ứng dụng liên tục nhận lỗi SQLITE_BUSY khi ghi và tệp .wal phình to hàng trăm GB làm cạn kiệt đĩa cứng.',
+                mitigation: 'Giữ giao dịch ngắn, bật PRAGMA journal_mode=WAL, thiết lập busy_timeout hợp lý hoặc chuyển sang PostgreSQL.'
+            },
+            {
+                severity: 'P3',
+                rdbms: 'PostgreSQL',
+                title: 'Connection Avalanche Process Memory Exhaustion',
+                mech: 'Ứng dụng mở hàng nghìn kết nối trực tiếp; mỗi kết nối khởi tạo 1 tiến trình OS riêng cấp phát work_mem cho phép sort/hash.',
+                impact: 'RAM máy chủ bị vắt kiệt nhanh chóng, kích hoạt OOM Killer sập tiến trình cơ sở dữ liệu.',
+                mitigation: 'Bắt buộc triển khai bộ gom kết nối bên ngoài (PgBouncer hoặc Odyssey) để giới hạn số kết nối thực sự tới Postgres.'
+            }
+        ];
+
+        // INITIALIZATION & EVENT LISTENERS
+        document.addEventListener("DOMContentLoaded", function () {
+            runDecisionEngine();
+            setVisualizerMode('heap');
+            renderMasterTable(rdbmsData);
+            renderFailureModes(failureModes);
+            calculateOracleCost();
+            initCapabilityRadarChart();
+            initPg17BenchmarkChart();
+        });
+
+        // 1. DECISION ENGINE LOGIC
+        function runDecisionEngine() {
+            const workload = document.getElementById('select-workload').value;
+            const concurrency = document.getElementById('select-concurrency').value;
+            const license = document.getElementById('select-license').value;
+            const pk = document.getElementById('select-pk').value;
+
+            let recTitle = "";
+            let recReason = "";
+            let recPros = "";
+            let recCons = "";
+            let recWarning = "";
+
+            if (workload === 'embedded') {
+                recTitle = "SQLite (Chế độ WAL Mode)";
+                recReason = "Kiến trúc In-Process Serverless loại bỏ hoàn toàn chi phí mạng TCP/IP và connection pool. Biên dịch VDBE bytecode chạy trực tiếp trong ứng dụng.";
+                recPros = "0ms latency mạng, đóng gói trong 1 tệp đơn, bộ nhớ cực thấp, mã nguồn Public Domain miễn phí hoàn toàn.";
+                recCons = "Giới hạn cứng 1 luồng ghi duy nhất tại một thời điểm (WAL_WRITE_LOCK).";
+                recWarning = "Cẩn trọng lỗi SQLITE_BUSY khi có luồng đọc kéo dài chặn checkpoint WAL.";
+            } else if (workload === 'distributed-global' || license === 'no-telemetry' && workload === 'distributed-global') {
+                if (license === 'no-telemetry') {
+                    recTitle = "PostgreSQL + Citus / YugabyteDB";
+                    recReason = "Đảm bảo tính tự chủ 100% mã nguồn mở không bị ràng buộc bởi chính sách đóng bản quyền CockroachDB Enterprise 2024.";
+                    recPros = "Mở rộng ngang, giữ nguyên tính năng chuẩn của PostgreSQL, không gửi telemetry ra ngoài.";
+                    recCons = "Đòi hỏi chuyên môn cao hơn khi quản lý cụm phân tán.";
+                    recWarning = "Cần thiết lập chính sách sao lưu và failover slots chặt chẽ.";
+                } else {
+                    recTitle = "CockroachDB (Distributed SQL)";
+                    recReason = "Đồng thuận Raft/Paxos phân tán tự động, đảm bảo thuộc tính ACID SERIALIZABLE toàn cầu trên nhiều vùng địa lý (Multi-Region).";
+                    recPros = "Tự động phân mảnh (auto-sharding), không có điểm lỗi đơn lẻ (No Single Point of Failure).";
+                    recCons = "Định giá vCPU cao nếu doanh thu > $10M.";
+                    recWarning = "Bắt buộc gửi dữ liệu telemetry liên tục. Nếu ngắt quá 7 ngày cụm sẽ bị Throttled bóp hiệu năng!";
+                }
+            } else if (concurrency === 'extreme' || workload === 'htap-logs') {
+                recTitle = "MariaDB 11.4 / 11.8 LTS (với Thread Pool & MyRocks / ColumnStore)";
+                recReason = "Cung cấp sẵn Thread Pool miễn phí xử lý >200,000 kết nối đồng thời mà không bị bão tiến trình như PostgreSQL. Engine MyRocks (LSM-Tree) tăng tốc ghi 5x và nén đĩa 10x.";
+                recPros = "Miễn phí 100% GPL, tích hợp cụm Galera Cluster không mất dữ liệu, hỗ trợ PL/SQL Oracle trực tiếp.";
+                recCons = "JSON lưu trữ dạng LONGTEXT văn bản thay vì định dạng nhị phân.";
+                recWarning = "Cần kiểm tra kỹ tính tương thích nếu chuyển đổi qua lại từ MySQL 8.0+.";
+            } else if (workload === 'oltp-fastkey' && pk === 'auto-inc') {
+                recTitle = "MySQL 8.4 LTS (InnoDB Storage Engine)";
+                recReason = "Cấu trúc Clustered Index (IOT) của InnoDB sắp xếp vật lý dữ liệu theo khóa chính AUTO_INCREMENT, tối ưu tuyệt đối cho tra cứu điểm điểm (point lookup).";
+                recPros = "Tiêu thụ ít RAM mạng nhờ mô hình luồng, tốc độ tra cứu khóa chính cực nhanh, hệ sinh thái Cloud lớn nhất.";
+                recCons = "Tra cứu qua chỉ mục phụ tốn 2 bước nhảy I/O B-tree; Bộ tối ưu hóa yếu hơn ở câu truy vấn Join phức tạp.";
+                recWarning = "Phiên bản 8.4 LTS đã gỡ bỏ hoàn toàn plugin cũ mysql_native_password.";
+            } else if (workload === 'enterprise-core') {
+                recTitle = "IBM Db2 (pureScale) / SQL Server 2022 / Oracle EE";
+                recReason = "Kiến trúc cụm đĩa dùng chung Active-Active (pureScale/RAC) chịu lỗi tối đa cho các hệ thống Core Banking và ERP tập đoàn.";
+                recPros = "Độ tin cậy cực đại, hỗ trợ nhiều ngôn ngữ cổ điển (COBOL, RPG, PL/I), xử lý cột BLU Acceleration.";
+                recCons = "Chi phí bản quyền đắt đỏ, quy định kiểm toán phần cứng khắt khe.";
+                recWarning = "Lưu ý hệ số nhân lõi Core Factor và tránh đặt máy ảo vào cụm VMware vCenter dùng chung để tránh bị truy thu bản quyền.";
+            } else {
+                // Default Best Choice: PostgreSQL 17
+                recTitle = "PostgreSQL 17 (Lựa Chọn Trụ Cột Tối Ưu Nhất)";
+                recReason = "Cấu trúc Heap Table linh hoạt khi thay đổi khóa chính; Bộ tối ưu hóa CBO kết hợp Parallel Query, JIT và Streaming I/O API trên PG 17 mang lại năng lực xử lý vượt trội cho OLAP/OLTP hỗn hợp, GIS (PostGIS) và AI Vector.";
+                recPros = "Giảm 20x RAM cho Vacuum, tăng 2x thông lượng ghi WAL, hỗ trợ JSONB nhị phân + JSON_TABLE, Giấy phép mã nguồn mở tự do 100%.";
+                recCons = "Mô hình Process-per-connection tốn bộ nhớ ở kết nối cao (cần PgBouncer).";
+                recWarning = "Cần giám sát tuổi giao dịch age(relfrozenxid) để tránh thảm họa XID Wraparound Lockout!";
+            }
+
+            const resBox = document.getElementById('decision-result-card');
+            resBox.innerHTML = `
+                <div class="flex items-center justify-between border-b border-blue-500/30 pb-3 mb-3">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-xs uppercase tracking-wider font-bold text-blue-400">Khuyến Nghị Tối Ưu:</span>
+                        <h3 class="text-base font-extrabold text-white">${recTitle}</h3>
+                    </div>
+                    <span class="bg-blue-600/30 text-blue-300 border border-blue-400/30 text-[11px] px-2.5 py-0.5 rounded-full font-mono">Đánh Giá Kiến Trúc</span>
+                </div>
+                <p class="text-xs text-slate-200 leading-relaxed mb-3"><strong>Lý do kỹ thuật:</strong> ${recReason}</p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs mb-3">
+                    <div class="bg-slate-900/60 p-2.5 rounded border border-slate-700/60">
+                        <span class="text-emerald-400 font-bold block mb-1">✓ Ưu điểm cốt lõi:</span>
+                        <span class="text-slate-300">${recPros}</span>
+                    </div>
+                    <div class="bg-slate-900/60 p-2.5 rounded border border-slate-700/60">
+                        <span class="text-amber-400 font-bold block mb-1">⚠️ Giới hạn kiến trúc:</span>
+                        <span class="text-slate-300">${recCons}</span>
+                    </div>
+                </div>
+                <div class="bg-rose-950/40 border border-rose-800/40 p-2.5 rounded text-xs text-rose-200">
+                    <strong>Rủi ro Production cần chốt chặn:</strong> ${recWarning}
+                </div>
+            `;
+        }
+
+        // 2. STORAGE ENGINE VISUALIZER MECHANICS
+        function setVisualizerMode(mode) {
+            const btnHeap = document.getElementById('btn-mode-heap');
+            const btnIot = document.getElementById('btn-mode-iot');
+            const btnLsm = document.getElementById('btn-mode-lsm');
+            const explainBox = document.getElementById('visualizer-explain');
+            const diagramTitle = document.getElementById('diagram-title');
+            const canvas = document.getElementById('diagram-canvas');
+
+            // Reset styles
+            [btnHeap, btnIot, btnLsm].forEach(b => {
+                b.className = "w-full text-left p-3 rounded-lg border text-xs font-medium transition flex items-center justify-between bg-white border-slate-200 text-slate-700 hover:bg-slate-100";
+            });
+
+            if (mode === 'heap') {
+                btnHeap.className = "w-full text-left p-3 rounded-lg border text-xs font-medium transition flex items-center justify-between bg-blue-50 border-blue-300 text-blue-900 font-bold";
+                diagramTitle.innerText = "Kiến Trúc Heap Table (PostgreSQL, Oracle)";
+                explainBox.innerHTML = `
+                    <p><strong>Cơ chế Heap:</strong> Dữ liệu dòng nằm rải rác trong vùng Heap không theo thứ tự. Mọi chỉ mục phụ (Secondary Index) đều bình đẳng và phần lá trỏ trực tiếp tới con trỏ địa chỉ <code class="bg-amber-100 text-amber-900 px-1 rounded">ctid (block_num, offset)</code>.</p>
+                    <p><strong>Truy vấn:</strong> Quét chỉ mục phụ mất đúng <strong>1 bước nhảy I/O</strong> để lấy dữ liệu. Sửa đổi khóa chính chỉ tốn vài ms vì ctid của dòng không đổi!</p>
+                `;
+                canvas.innerHTML = `
+                    <div class="space-y-4 font-mono text-xs">
+                        <div class="bg-slate-800 p-3 rounded border border-blue-500/40">
+                            <div class="text-blue-400 font-bold mb-1">1. Secondary Index B-Tree (e.g. INDEX on email)</div>
+                            <div class="flex items-center justify-between bg-slate-900 p-2 rounded text-slate-300">
+                                <span>Key: "user@test.com"</span>
+                                <span class="text-yellow-400 font-bold">--> Pointer: ctid (Block 42, Offset 7)</span>
+                            </div>
+                        </div>
+                        <div class="text-center text-blue-400 text-sm">↓ Direct Hop (1 Step I/O) ↓</div>
+                        <div class="bg-slate-800 p-3 rounded border border-emerald-500/40">
+                            <div class="text-emerald-400 font-bold mb-1">2. Unordered Heap Page (Block 42)</div>
+                            <div class="bg-slate-900 p-2 rounded text-slate-200">
+                                [Row Tuple]: id=105, name="Nguyen Van A", email="user@test.com", xmin=5001
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if (mode === 'iot') {
+                btnIot.className = "w-full text-left p-3 rounded-lg border text-xs font-medium transition flex items-center justify-between bg-blue-50 border-blue-300 text-blue-900 font-bold";
+                diagramTitle.innerText = "Kiến Trúc Clustered Index / IOT (MySQL InnoDB)";
+                explainBox.innerHTML = `
+                    <p><strong>Cơ chế IOT:</strong> Bảng vật lý chính là cây B+-Tree của Khóa Chính. Dữ liệu các cột nằm ngay tại các nút lá của Clustered Index.</p>
+                    <p><strong>Truy vấn:</strong> Tra cứu chỉ mục phụ phải chịu <strong>2 bước nhảy I/O (Two B-Tree Hops)</strong>: bước 1 tìm giá trị Khóa Chính từ chỉ mục phụ, bước 2 dùng Khóa Chính duyệt lại từ gốc cây Clustered Index xuống lá!</p>
+                `;
+                canvas.innerHTML = `
+                    <div class="space-y-3 font-mono text-xs">
+                        <div class="bg-slate-800 p-2.5 rounded border border-blue-500/40">
+                            <div class="text-blue-400 font-bold mb-1">1. Secondary Index B-Tree (Leaf)</div>
+                            <div class="bg-slate-900 p-1.5 rounded text-slate-300 flex justify-between">
+                                <span>Key: "user@test.com"</span>
+                                <span class="text-amber-300">--> Primary Key: ID = 105</span>
+                            </div>
+                        </div>
+                        <div class="text-center text-amber-400 text-xs">↓ Traverse Primary Key B-Tree (Hop 2) ↓</div>
+                        <div class="bg-slate-800 p-2.5 rounded border border-indigo-500/40">
+                            <div class="text-indigo-400 font-bold mb-1">2. Clustered Index Root -> Branch -> Leaf Page</div>
+                            <div class="bg-slate-900 p-1.5 rounded text-slate-200">
+                                Leaf [PK=105]: id=105, name="Nguyen Van A", email="user@test.com"
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                btnLsm.className = "w-full text-left p-3 rounded-lg border text-xs font-medium transition flex items-center justify-between bg-blue-50 border-blue-300 text-blue-900 font-bold";
+                diagramTitle.innerText = "Kiến Trúc LSM-Tree (MariaDB MyRocks / RocksDB)";
+                explainBox.innerHTML = `
+                    <p><strong>Cơ chế LSM-Tree:</strong> Thay vì ghi đè ngẫu nhiên các trang B-Tree trên đĩa, dữ liệu mới được ghi vào bộ nhớ <code class="bg-amber-100 text-amber-900 px-1 rounded">MemTable</code> và xả tuần tự xuống đĩa thành các khối nén chặt <code class="bg-amber-100 text-amber-900 px-1 rounded">SSTables</code>.</p>
+                    <p><strong>Hiệu năng:</strong> Tăng thông lượng ghi gấp <strong>3-5 lần</strong> và nén dung lượng tốt hơn 10 lần trên đĩa SSD.</p>
+                `;
+                canvas.innerHTML = `
+                    <div class="space-y-3 font-mono text-xs">
+                        <div class="bg-slate-800 p-2.5 rounded border border-emerald-500/40">
+                            <div class="text-emerald-400 font-bold mb-1">1. RAM MemTable (Sequential Write)</div>
+                            <div class="bg-slate-900 p-1.5 rounded text-emerald-300">
+                                [In-Memory Active Buffer] -> Fast Append
+                            </div>
+                        </div>
+                        <div class="text-center text-emerald-400 text-xs">↓ Flush & Compaction ↓</div>
+                        <div class="bg-slate-800 p-2.5 rounded border border-slate-600">
+                            <div class="text-slate-300 font-bold mb-1">2. Immutable SSTables on Flash/SSD (Level 0 .. Level N)</div>
+                            <div class="bg-slate-900 p-1.5 rounded text-slate-400 text-[11px]">
+                                [Block Compressed Data Files] (High Compression Ratio ~10x)
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // 3. MASTER TABLE FILTER
+        function renderMasterTable(data) {
+            const tbody = document.getElementById('master-table-body');
+            tbody.innerHTML = '';
+
+            data.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition border-b border-slate-100";
+                tr.innerHTML = `
+                    <td class="p-3 font-bold text-slate-900">
+                        ${item.name}
+                        <span class="block text-[10px] text-slate-400 font-normal uppercase">${item.category}</span>
+                    </td>
+                    <td class="p-3 text-slate-700">${item.phy_structure}</td>
+                    <td class="p-3 text-slate-700">${item.storage_engine}</td>
+                    <td class="p-3 text-slate-700">${item.mvcc_locking}</td>
+                    <td class="p-3 text-slate-700">${item.conn_mem}</td>
+                    <td class="p-3 text-slate-700">${item.optimizer}</td>
+                    <td class="p-3 text-slate-700">${item.json_type}</td>
+                    <td class="p-3 font-medium text-blue-700">${item.license}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function filterMasterTable() {
+            const cat = document.getElementById('table-category-filter').value;
+            const query = document.getElementById('table-search-input').value.toLowerCase();
+
+            const filtered = rdbmsData.filter(item => {
+                const matchCat = (cat === 'all') || (item.category === cat);
+                const matchQuery = item.name.toLowerCase().includes(query) ||
+                                   item.phy_structure.toLowerCase().includes(query) ||
+                                   item.storage_engine.toLowerCase().includes(query) ||
+                                   item.mvcc_locking.toLowerCase().includes(query) ||
+                                   item.optimizer.toLowerCase().includes(query) ||
+                                   item.json_type.toLowerCase().includes(query);
+                return matchCat && matchQuery;
+            });
+
+            renderMasterTable(filtered);
+        }
+
+        // 4. ORACLE LICENSE CALCULATOR
+        function calculateOracleCost() {
+            const cores = parseInt(document.getElementById('input-oracle-cores').value) || 0;
+            const factor = parseFloat(document.getElementById('select-oracle-arch').value);
+
+            const licensesRequired = Math.ceil(cores * factor);
+            const approxCostUSD = licensesRequired * 47500; // List price reference ~$47.5k per Processor license
+            const ocpuEquiv = factor === 0.25 ? licensesRequired * 4 : licensesRequired * 2;
+
+            const resDiv = document.getElementById('oracle-calc-result');
+            resDiv.innerHTML = `
+                <div class="flex justify-between items-center border-b border-slate-700 pb-2">
+                    <span class="text-slate-300">Số Giấy Phép Processor Yêu Cầu:</span>
+                    <span class="text-amber-400 font-black text-base font-mono">${licensesRequired} Licenses</span>
+                </div>
+                <div class="flex justify-between items-center border-b border-slate-700 pb-2">
+                    <span class="text-slate-300">Ước Tính Chi Phí Bản Quyền Niêm Yết:</span>
+                    <span class="text-emerald-400 font-extrabold font-mono">~$${approxCostUSD.toLocaleString()} USD</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-slate-300">Quy Đổi Năng Lực Trên OCI Cloud:</span>
+                    <span class="text-blue-300 font-bold font-mono">${ocpuEquiv} OCPUs</span>
+                </div>
+            `;
+        }
+
+        // 5. FAILURE MODES RENDER & FILTER
+        function renderFailureModes(items) {
+            const container = document.getElementById('failure-modes-container');
+            container.innerHTML = '';
+
+            items.forEach(item => {
+                let badgeClass = "bg-rose-100 text-rose-800 border-rose-300";
+                if (item.severity === 'P2') badgeClass = "bg-amber-100 text-amber-800 border-amber-300";
+                if (item.severity === 'P3') badgeClass = "bg-blue-100 text-blue-800 border-blue-300";
+
+                const div = document.createElement('div');
+                div.className = "bg-slate-50 p-5 rounded-xl border border-slate-200 flex flex-col justify-between space-y-3";
+                div.innerHTML = `
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${badgeClass}">${item.severity} - ${item.rdbms}</span>
+                            <span class="text-[11px] text-slate-400 font-mono">Incident Protocol</span>
+                        </div>
+                        <h3 class="text-sm font-bold text-slate-900">${item.title}</h3>
+                        <p class="text-xs text-slate-600 mt-2"><strong>Cơ chế:</strong> ${item.mech}</p>
+                        <p class="text-xs text-slate-700 mt-1"><strong>Hậu quả:</strong> ${item.impact}</p>
+                    </div>
+                    <div class="bg-emerald-50/80 border border-emerald-200/80 p-2.5 rounded text-xs text-emerald-900">
+                        <strong>Chốt chặn khắc phục (DBRE):</strong> ${item.mitigation}
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function filterFailureModes(sev) {
+            ['all', 'p1', 'p2', 'p3'].forEach(s => {
+                const btn = document.getElementById(`btn-fail-${s}`);
+                if (btn) btn.className = "px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200";
+            });
+            document.getElementById(`btn-fail-${sev.toLowerCase()}`).className = "px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 text-white";
+
+            if (sev === 'all') {
+                renderFailureModes(failureModes);
+            } else {
+                const filtered = failureModes.filter(f => f.severity === sev);
+                renderFailureModes(filtered);
+            }
+        }
+
+        // 6. CHART.JS VISUALIZATIONS
+        function initCapabilityRadarChart() {
+            const ctx = document.getElementById('radarCapabilityChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: [
+                        'Truy Truy Phức Tạp (OLAP)',
+                        'Ghi Khóa Chính Simplicity',
+                        'Mở Rộng Phân Tán',
+                        'Tối Ưu Bộ Nhớ RAM',
+                        'Xử Lý Spatial/JSON',
+                        'Lợi Thế Chi Phí Bản Quyền'
+                    ],
+                    datasets: [
+                        {
+                            label: 'PostgreSQL 17',
+                            data: [95, 80, 85, 80, 98, 95],
+                            borderColor: '#2563eb',
+                            backgroundColor: 'rgba(37, 99, 235, 0.15)',
+                            borderWidth: 2
+                        },
+                        {
+                            label: 'MySQL 8.4 LTS',
+                            data: [70, 95, 75, 90, 75, 85],
+                            borderColor: '#d97706',
+                            backgroundColor: 'rgba(217, 119, 6, 0.15)',
+                            borderWidth: 2
+                        },
+                        {
+                            label: 'MariaDB 11.4 LTS',
+                            data: [85, 90, 80, 95, 75, 95],
+                            borderColor: '#0d9488',
+                            backgroundColor: 'rgba(13, 148, 136, 0.15)',
+                            borderWidth: 2
+                        },
+                        {
+                            label: 'CockroachDB',
+                            data: [80, 75, 98, 70, 80, 50],
+                            borderColor: '#e11d48',
+                            backgroundColor: 'rgba(225, 29, 72, 0.15)',
+                            borderWidth: 2
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: { color: '#e2e8f0' },
+                            grid: { color: '#cbd5e1' },
+                            pointLabels: {
+                                font: { size: 10, weight: 'bold' },
+                                color: '#334155'
+                            },
+                            ticks: { display: false, stepSize: 20 },
+                            suggestedMin: 30,
+                            suggestedMax: 100
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { boxWidth: 12, font: { size: 11 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        function initPg17BenchmarkChart() {
+            const ctx = document.getElementById('pg17BenchmarkChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: [
+                        'Parallel Seq Scan (Giây - Thấp hơn là tốt)',
+                        'Vacuum Memory Overhead (MB - Thấp hơn là tốt)',
+                        'WAL Output Efficiency Index (Điểm số)'
+                    ],
+                    datasets: [
+                        {
+                            label: 'PostgreSQL 16',
+                            data: [6.6, 1024, 100],
+                            backgroundColor: '#94a3b8'
+                        },
+                        {
+                            label: 'PostgreSQL 17',
+                            data: [4.8, 51.2, 200],
+                            backgroundColor: '#10b981'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            type: 'logarithmic',
+                            grid: { color: '#f1f5f9' },
+                            ticks: {
+                                callback: function (value) {
+                                    return Number(value).toString();
+                                }
+                            }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { font: { size: 10 } }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { boxWidth: 12, font: { size: 11 } }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    return context.dataset.label + ': ' + context.raw;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
