@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Measuring Latency — Percentiles, Distributions &amp; Monitoring</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0c0e15;--bg2:#12151f;--bg3:#1a1e2e;
+  --fg:#c8ccd8;--fg2:#8b90a5;--accent:#6ea8fe;--accent2:#63e6be;
+  --warn:#ffc078;--danger:#ff6b6b;--purple:#b197fc;--pink:#f783ac;
+  --card:#151928;--border:#252a3a;
+  --radius:12px;--shadow:0 4px 20px rgba(0,0,0,.4);
+}
+html{scroll-behavior:smooth;font-size:16px}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--fg);line-height:1.72;overflow-x:hidden}
+a{color:var(--accent);text-decoration:none}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(12,14,21,.93);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);padding:0 2rem}
+nav ul{display:flex;gap:1.2rem;list-style:none;max-width:1100px;margin:auto;overflow-x:auto}
+nav li a{display:block;padding:.8rem .2rem;font-size:.8rem;color:var(--fg2);border-bottom:2px solid transparent;transition:.25s;white-space:nowrap}
+nav li a:hover,nav li a.active{color:var(--accent);border-color:var(--accent);text-decoration:none}
+
+/* LAYOUT */
+main{max-width:920px;margin:0 auto;padding:5rem 1.5rem 4rem}
+section{margin-bottom:4.5rem;opacity:0;transform:translateY(24px);transition:opacity .6s,transform .6s}
+section.visible{opacity:1;transform:none}
+
+h1{font-size:2.5rem;font-weight:800;color:#fff;letter-spacing:-.02em}
+h2{font-size:1.5rem;font-weight:700;color:#fff;margin:2.5rem 0 1rem;padding-bottom:.4rem;border-bottom:2px solid var(--border)}
+h3{font-size:1.1rem;font-weight:600;color:var(--accent);margin:1.6rem 0 .5rem}
+p{margin-bottom:.9rem}
+.sub{font-size:1.1rem;color:var(--fg2);margin-bottom:2.5rem}
+ul,ol{padding-left:1.3rem;margin-bottom:1rem;color:var(--fg2)}
+li{margin-bottom:.3rem}
+strong{color:#e0e2ea}
+
+/* CARD */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1.4rem;margin:1.1rem 0;box-shadow:var(--shadow);transition:transform .2s}
+.card:hover{transform:translateY(-2px)}
+
+/* FORMULA */
+.formula{background:linear-gradient(135deg,#151d38,#1a2445);border-left:4px solid var(--accent);border-radius:var(--radius);padding:1.3rem 1.8rem;margin:1.3rem 0;text-align:center;font-size:1.5rem;font-weight:700;color:#fff}
+.formula small{display:block;font-size:.8rem;color:var(--fg2);font-weight:400;margin-top:.4rem}
+
+/* TABLE */
+table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.88rem}
+th{background:var(--bg3);color:var(--accent);text-align:left;padding:.7rem 1rem;font-weight:600}
+td{padding:.6rem 1rem;border-bottom:1px solid var(--border)}
+tr:hover td{background:rgba(110,168,254,.04)}
+
+/* DIAGRAM */
+.dia{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1.4rem;margin:1.3rem 0;overflow-x:auto}
+.dia svg{display:block;margin:0 auto;max-width:100%;height:auto}
+
+/* BOXES */
+.note,.tip,.warn-box{border-radius:var(--radius);padding:1rem 1.2rem;margin:1.1rem 0;font-size:.9rem}
+.note{background:rgba(110,168,254,.07);border-left:4px solid var(--accent)}
+.tip{background:rgba(99,230,190,.07);border-left:4px solid var(--accent2)}
+.warn-box{background:rgba(255,107,107,.07);border-left:4px solid var(--danger)}
+
+/* TAGS */
+.tag{display:inline-block;padding:.12rem .55rem;border-radius:20px;font-size:.72rem;font-weight:600;margin-right:.25rem}
+.t-blue{background:rgba(110,168,254,.14);color:var(--accent)}
+.t-green{background:rgba(99,230,190,.14);color:var(--accent2)}
+.t-orange{background:rgba(255,192,120,.14);color:var(--warn)}
+.t-red{background:rgba(255,107,107,.14);color:var(--danger)}
+
+/* GRID */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:1.1rem;margin:1rem 0}
+@media(max-width:640px){.g2{grid-template-columns:1fr}}
+
+/* HISTOGRAM */
+.histo{display:flex;align-items:flex-end;gap:2px;height:180px;margin:1rem 0;padding-bottom:24px;position:relative}
+.histo-bar{flex:1;min-width:4px;border-radius:3px 3px 0 0;transition:height .35s,background .35s;position:relative;cursor:crosshair}
+.histo-bar:hover{filter:brightness(1.3)}
+.histo-axis{position:absolute;bottom:0;left:0;right:0;height:1px;background:var(--border)}
+.histo-label{position:absolute;bottom:-20px;font-size:.6rem;color:var(--fg2);white-space:nowrap}
+
+/* CONTROLS */
+.ctrl{display:flex;flex-wrap:wrap;gap:.8rem;margin:1rem 0;align-items:center}
+.ctrl button{padding:.5rem 1.2rem;border:1px solid var(--border);border-radius:8px;background:var(--bg3);color:var(--fg);font-size:.85rem;cursor:pointer;transition:.2s;font-weight:500}
+.ctrl button:hover{border-color:var(--accent);color:var(--accent)}
+.ctrl button.active{background:var(--accent);color:#000;border-color:var(--accent);font-weight:700}
+.ctrl select,.ctrl input[type=range]{padding:.4rem;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--fg);font-size:.85rem}
+.ctrl input[type=range]{width:160px;accent-color:var(--accent)}
+
+/* PERCENTILE MARKERS */
+.pct-markers{display:flex;gap:1rem;flex-wrap:wrap;margin:.8rem 0}
+.pct-marker{display:flex;align-items:center;gap:.4rem;font-size:.82rem;font-weight:600}
+.pct-dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+
+/* SCENARIO CARDS */
+.scenario{display:grid;grid-template-columns:60px 1fr;gap:.8rem;align-items:start;padding:1rem;margin:.8rem 0;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg2)}
+.scenario-icon{font-size:2.2rem;text-align:center}
+
+/* FANOUT VISUAL */
+.fanout-result{font-size:1.8rem;font-weight:800;text-align:center;padding:1rem;margin:.8rem 0;border-radius:var(--radius)}
+
+/* TIMELINE */
+.timeline{position:relative;padding-left:28px;margin:1rem 0}
+.timeline::before{content:'';position:absolute;left:8px;top:0;bottom:0;width:2px;background:var(--border)}
+.tl-item{position:relative;margin-bottom:1.2rem;padding:.8rem 1rem;background:var(--bg2);border-radius:var(--radius);border:1px solid var(--border)}
+.tl-item::before{content:'';position:absolute;left:-24px;top:1rem;width:12px;height:12px;border-radius:50%;border:2px solid var(--accent);background:var(--bg)}
+
+footer{text-align:center;padding:2rem;color:var(--fg2);font-size:.78rem;border-top:1px solid var(--border)}
+</style>
+</head>
+<body>
+
+<nav>
+<ul>
+  <li><a href="#intro">Why Not Average</a></li>
+  <li><a href="#percentiles">Percentiles</a></li>
+  <li><a href="#simulator">Simulator</a></li>
+  <li><a href="#compare">Compare</a></li>
+  <li><a href="#fanout">Fan-out</a></li>
+  <li><a href="#p95vsp99">P95 vs P99</a></li>
+  <li><a href="#monitoring">Monitoring</a></li>
+  <li><a href="#strategy">Strategy</a></li>
+</ul>
+</nav>
+
+<main>
+
+<!-- ═══ INTRO ═══ -->
+<section id="intro">
+<h1>Measuring Latency</h1>
+<p class="sub">Percentiles, Distributions &amp; Monitoring — A Visual Guide</p>
+
+<h2>1 — Why Average Latency Is Dangerous</h2>
+<p>Many teams use <strong>average latency</strong> to measure system performance. This is a mistake. The average hides important problems.</p>
+
+<h3>Example: 10 Requests</h3>
+<div class="dia">
+<svg viewBox="0 0 760 200" xmlns="http://www.w3.org/2000/svg">
+  <text x="380" y="22" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">10 requests — their latency (ms)</text>
+  <!-- bars -->
+  <g id="introBarGroup">
+    <rect x="40"  y="105" width="50" height="60" rx="4" fill="#63e6be"><title>12ms</title></rect>
+    <rect x="100" y="100" width="50" height="65" rx="4" fill="#63e6be"><title>13ms</title></rect>
+    <rect x="160" y="110" width="50" height="55" rx="4" fill="#63e6be"><title>11ms</title></rect>
+    <rect x="220" y="95"  width="50" height="70" rx="4" fill="#63e6be"><title>14ms</title></rect>
+    <rect x="280" y="105" width="50" height="60" rx="4" fill="#63e6be"><title>12ms</title></rect>
+    <rect x="340" y="100" width="50" height="65" rx="4" fill="#63e6be"><title>13ms</title></rect>
+    <rect x="400" y="110" width="50" height="55" rx="4" fill="#63e6be"><title>11ms</title></rect>
+    <rect x="460" y="105" width="50" height="60" rx="4" fill="#63e6be"><title>12ms</title></rect>
+    <rect x="520" y="100" width="50" height="65" rx="4" fill="#63e6be"><title>13ms</title></rect>
+    <!-- outlier -->
+    <rect x="580" y="35"  width="50" height="130" rx="4" fill="#ff6b6b">
+      <animate attributeName="opacity" values="1;.5;1" dur="2s" repeatCount="indefinite"/>
+      <title>450ms</title>
+    </rect>
+  </g>
+  <!-- labels -->
+  <text x="65"  y="180" text-anchor="middle" fill="var(--fg2)" font-size="9">12</text>
+  <text x="125" y="180" text-anchor="middle" fill="var(--fg2)" font-size="9">13</text>
+  <text x="185" y="180" text-anchor="middle" fill="var(--fg2)" font-size="9">11</text>
+  <text x="245" y="180" text-anchor="middle" fill="var(--fg2)" font-size="9">14</text>
+  <text x="305" y="180" text-anchor="middle" fill="var(--fg2)" font-size="9">12</text>
+  <text x="365" y="180" text-anchor="middle" fill="var(--fg2)" font-size="9">13</text>
+  <text x="425" y="180" text-anchor="middle" fill="var(--fg2)" font-size="9">11</text>
+  <text x="485" y="180" text-anchor="middle" fill="var(--fg2)" font-size="9">12</text>
+  <text x="545" y="180" text-anchor="middle" fill="var(--fg2)" font-size="9">13</text>
+  <text x="605" y="180" text-anchor="middle" fill="#ff6b6b" font-size="9" font-weight="700">450!</text>
+
+  <!-- average line -->
+  <line x1="30" y1="92" x2="650" y2="92" stroke="#ffc078" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="665" y="96" fill="#ffc078" font-size="10" font-weight="600">Avg = 56ms</text>
+  <text x="665" y="112" fill="#ffc078" font-size="9">← Misleading!</text>
+</svg>
+</div>
+
+<div class="g2">
+  <div class="card">
+    <h3 style="color:var(--danger)">❌ What Average Shows</h3>
+    <p style="font-size:2rem;font-weight:800;color:var(--warn)">56.1 ms</p>
+    <p>"The system is OK." — <strong>Wrong.</strong></p>
+    <p>The average mixes 9 fast requests with 1 very slow request. The result looks normal. But 1 in 10 users waited <strong>450 ms</strong>.</p>
+  </div>
+  <div class="card">
+    <h3 style="color:var(--accent2)">✅ What Percentiles Show</h3>
+    <table>
+      <tr><td><strong>P50</strong></td><td>12.5 ms</td><td><span class="tag t-green">Typical user</span></td></tr>
+      <tr><td><strong>P90</strong></td><td>54 ms</td><td><span class="tag t-orange">Slow users</span></td></tr>
+      <tr><td><strong>P99</strong></td><td>450 ms</td><td><span class="tag t-red">Worst case</span></td></tr>
+    </table>
+    <p style="margin-top:.5rem">Now you can see the outlier clearly.</p>
+  </div>
+</div>
+</section>
+
+<!-- ═══ PERCENTILES ═══ -->
+<section id="percentiles">
+<h2>2 — What Is a Percentile?</h2>
+<p>A percentile tells you: <strong>"X% of all requests are faster than this value."</strong></p>
+
+<div class="dia">
+<svg viewBox="0 0 760 220" xmlns="http://www.w3.org/2000/svg">
+  <text x="380" y="22" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">100 requests sorted by latency (low → high)</text>
+
+  <!-- Sorted bar area -->
+  <rect x="40" y="40" width="680" height="100" rx="6" fill="rgba(99,230,190,.04)" stroke="var(--border)"/>
+
+  <!-- P50 zone -->
+  <rect x="40" y="40" width="340" height="100" rx="6 0 0 6" fill="rgba(99,230,190,.08)"/>
+  <line x1="380" y1="38" x2="380" y2="142" stroke="#63e6be" stroke-width="2"/>
+  <text x="380" y="165" text-anchor="middle" fill="#63e6be" font-size="11" font-weight="700">P50 = 15ms</text>
+  <text x="380" y="180" text-anchor="middle" fill="var(--fg2)" font-size="9">50% are faster</text>
+
+  <!-- P95 -->
+  <line x1="686" y1="38" x2="686" y2="142" stroke="#ffc078" stroke-width="2"/>
+  <text x="686" y="165" text-anchor="middle" fill="#ffc078" font-size="11" font-weight="700">P95 = 85ms</text>
+  <text x="686" y="180" text-anchor="middle" fill="var(--fg2)" font-size="9">95% are faster</text>
+
+  <!-- P99 -->
+  <line x1="713" y1="38" x2="713" y2="142" stroke="#ff6b6b" stroke-width="2"/>
+  <text x="713" y="165" text-anchor="middle" fill="#ff6b6b" font-size="11" font-weight="700">P99</text>
+  <text x="713" y="180" text-anchor="middle" fill="var(--fg2)" font-size="9">340ms</text>
+
+  <!-- Labels inside -->
+  <text x="210" y="95" text-anchor="middle" fill="#63e6be" font-size="20" font-weight="800" opacity=".3">50%</text>
+  <text x="540" y="95" text-anchor="middle" fill="var(--fg2)" font-size="16" font-weight="700" opacity=".3">45%</text>
+  <text x="700" y="90" text-anchor="middle" fill="#ffc078" font-size="10" font-weight="700" opacity=".5">5%</text>
+
+  <!-- Arrows -->
+  <text x="60" y="210" fill="var(--fg2)" font-size="10">← Fast</text>
+  <text x="690" y="210" fill="var(--fg2)" font-size="10">Slow →</text>
+</svg>
+</div>
+
+<table>
+  <tr><th>Percentile</th><th>Meaning</th><th>Frequency of "worse"</th><th>Typical Use</th></tr>
+  <tr><td><strong>P50</strong> (median)</td><td>Half of the requests are faster</td><td>1 in 2</td><td>Typical user experience</td></tr>
+  <tr><td><strong>P90</strong></td><td>90% of the requests are faster</td><td>1 in 10</td><td>General quality check</td></tr>
+  <tr><td><strong>P95</strong></td><td>95% of the requests are faster</td><td>1 in 20</td><td>SLA target, broad alert</td></tr>
+  <tr><td><strong>P99</strong></td><td>99% of the requests are faster</td><td>1 in 100</td><td>Tail latency, early warning</td></tr>
+  <tr><td><strong>P99.9</strong></td><td>99.9% of the requests are faster</td><td>1 in 1,000</td><td>Critical systems (payments)</td></tr>
+</table>
+</section>
+
+<!-- ═══ SIMULATOR ═══ -->
+<section id="simulator">
+<h2>3 — Interactive: Latency Distribution Simulator</h2>
+<p>Click a distribution pattern to generate sample data. Watch how the histogram shape and percentile values change.</p>
+
+<div class="card">
+  <div class="ctrl">
+    <button class="active" onclick="genDist('normal',this)">Normal</button>
+    <button onclick="genDist('longtail',this)">Long Tail</button>
+    <button onclick="genDist('bimodal',this)">Bimodal</button>
+    <button onclick="genDist('uniform',this)">Uniform</button>
+    <button onclick="genDist('spiky',this)">GC Spikes</button>
+    <span style="margin-left:auto;font-size:.8rem;color:var(--fg2)">n = <strong id="sampleCount">500</strong> requests</span>
+  </div>
+
+  <div class="histo" id="histo"></div>
+
+  <div class="pct-markers" id="pctMarkers"></div>
+
+  <table id="pctTable">
+    <tr><th>Metric</th><th>Value</th><th>Interpretation</th></tr>
+  </table>
+</div>
+</section>
+
+<!-- ═══ COMPARE ═══ -->
+<section id="compare">
+<h2>4 — Compare: Same Average, Different Reality</h2>
+<p>Two services have almost the same average. But their percentiles show very different behavior.</p>
+
+<div class="g2">
+  <div class="card">
+    <h3 style="color:var(--accent2)">Service A — Stable</h3>
+    <p style="font-size:.85rem;color:var(--fg2)">All requests take approximately the same time.</p>
+    <div class="histo" id="histoA" style="height:120px"></div>
+    <table id="tableA"></table>
+  </div>
+  <div class="card">
+    <h3 style="color:var(--danger)">Service B — Long Tail</h3>
+    <p style="font-size:.85rem;color:var(--fg2)">Most requests are fast, but some are very slow.</p>
+    <div class="histo" id="histoB" style="height:120px"></div>
+    <table id="tableB"></table>
+  </div>
+</div>
+
+<div class="warn-box">
+  <strong>⚠ Lesson:</strong> Average ≈ 50ms for both. But Service B's P95 is <strong>7× worse</strong>. If you only monitor averages, you will not see this problem.
+</div>
+</section>
+
+<!-- ═══ FANOUT ═══ -->
+<section id="fanout">
+<h2>5 — The Fan-out Amplification Problem</h2>
+<p>In microservice systems, one user request often calls multiple backend services. The probability that <strong>all</strong> services respond quickly decreases with each added service.</p>
+
+<div class="dia">
+<svg viewBox="0 0 760 280" xmlns="http://www.w3.org/2000/svg">
+  <defs><marker id="a2" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="var(--fg2)"/></marker></defs>
+
+  <!-- User -->
+  <circle cx="60" cy="140" r="28" fill="#1e2848" stroke="#6ea8fe" stroke-width="2"/>
+  <text x="60" y="135" text-anchor="middle" fill="#6ea8fe" font-size="18">👤</text>
+  <text x="60" y="152" text-anchor="middle" fill="#6ea8fe" font-size="8" font-weight="600">User</text>
+
+  <!-- Gateway -->
+  <rect x="140" y="115" width="90" height="50" rx="10" fill="var(--card)" stroke="var(--border)"/>
+  <text x="185" y="144" text-anchor="middle" fill="#fff" font-size="10" font-weight="600">Gateway</text>
+  <line x1="88" y1="140" x2="138" y2="140" stroke="var(--fg2)" stroke-width="1.2" marker-end="url(#a2)"/>
+
+  <!-- Services -->
+  <line x1="232" y1="125" x2="300" y2="55"  stroke="var(--fg2)" stroke-width="1" marker-end="url(#a2)"/>
+  <line x1="232" y1="135" x2="300" y2="100" stroke="var(--fg2)" stroke-width="1" marker-end="url(#a2)"/>
+  <line x1="232" y1="140" x2="300" y2="145" stroke="var(--fg2)" stroke-width="1" marker-end="url(#a2)"/>
+  <line x1="232" y1="148" x2="300" y2="190" stroke="var(--fg2)" stroke-width="1" marker-end="url(#a2)"/>
+  <line x1="232" y1="155" x2="300" y2="235" stroke="var(--fg2)" stroke-width="1" marker-end="url(#a2)"/>
+
+  <rect x="305" y="32"  width="110" height="40" rx="8" fill="var(--card)" stroke="#63e6be"/><text x="360" y="55"  text-anchor="middle" fill="#63e6be" font-size="9" font-weight="600">Auth (P99=50ms)</text>
+  <rect x="305" y="82"  width="110" height="40" rx="8" fill="var(--card)" stroke="#6ea8fe"/><text x="360" y="105" text-anchor="middle" fill="#6ea8fe" font-size="9" font-weight="600">User (P99=80ms)</text>
+  <rect x="305" y="127" width="110" height="40" rx="8" fill="var(--card)" stroke="#b197fc"/><text x="360" y="150" text-anchor="middle" fill="#b197fc" font-size="9" font-weight="600">Order (P99=40ms)</text>
+  <rect x="305" y="172" width="110" height="40" rx="8" fill="var(--card)" stroke="#ffc078"/><text x="360" y="195" text-anchor="middle" fill="#ffc078" font-size="9" font-weight="600">Payment (P99=60ms)</text>
+  <rect x="305" y="217" width="110" height="40" rx="8" fill="var(--card)" stroke="#f783ac"/><text x="360" y="240" text-anchor="middle" fill="#f783ac" font-size="9" font-weight="600">Notify (P99=70ms)</text>
+
+  <!-- Result -->
+  <rect x="480" y="100" width="260" height="90" rx="12" fill="rgba(255,107,107,.08)" stroke="#ff6b6b" stroke-width="1.5"/>
+  <text x="610" y="125" text-anchor="middle" fill="#ff6b6b" font-size="11" font-weight="700">P(all 5 fast) = 0.99⁵</text>
+  <text x="610" y="148" text-anchor="middle" fill="#fff" font-size="22" font-weight="800">= 95.1%</text>
+  <text x="610" y="175" text-anchor="middle" fill="var(--fg2)" font-size="10">→ 4.9% of users hit at least one slow service</text>
+</svg>
+</div>
+
+<h3>How it scales</h3>
+<div class="card">
+  <div class="ctrl">
+    <label style="font-size:.85rem;color:var(--fg2)">Number of services:</label>
+    <input type="range" id="fanoutSlider" min="1" max="30" value="5" oninput="calcFanout()">
+    <span id="fanoutN" style="font-weight:700;color:var(--accent);min-width:2rem">5</span>
+    <label style="font-size:.85rem;color:var(--fg2);margin-left:1rem">Per-service P99 success:</label>
+    <input type="range" id="fanoutP" min="90" max="99.9" step="0.1" value="99" oninput="calcFanout()">
+    <span id="fanoutPVal" style="font-weight:700;color:var(--accent);min-width:3rem">99%</span>
+  </div>
+  <div class="fanout-result" id="fanoutResult"></div>
+
+  <!-- precomputed table -->
+  <table>
+    <tr><th>Services</th><th>P(all fast) at 99%</th><th>Users affected (1M/day)</th></tr>
+    <tr><td>1</td><td>99.0%</td><td style="color:var(--accent2)">10,000</td></tr>
+    <tr><td>5</td><td>95.1%</td><td style="color:var(--warn)">49,000</td></tr>
+    <tr><td>10</td><td>90.4%</td><td style="color:var(--warn)">96,000</td></tr>
+    <tr><td>20</td><td>81.8%</td><td style="color:var(--danger)">182,000</td></tr>
+    <tr><td>50</td><td>60.5%</td><td style="color:var(--danger)">395,000</td></tr>
+  </table>
+</div>
+</section>
+
+<!-- ═══ P95 vs P99 ═══ -->
+<section id="p95vsp99">
+<h2>6 — P95 vs P99: Different Detection Roles</h2>
+<p>P95 and P99 differ by only 4 percentage points. But they detect <strong>different types of problems</strong>.</p>
+
+<div class="dia">
+<svg viewBox="0 0 760 200" xmlns="http://www.w3.org/2000/svg">
+  <text x="380" y="22" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">Detection Timeline During an Incident</text>
+
+  <!-- Timeline arrow -->
+  <line x1="40" y1="100" x2="720" y2="100" stroke="var(--border)" stroke-width="2" marker-end="url(#a2)"/>
+
+  <!-- Zones -->
+  <rect x="40"  y="60" width="200" height="80" rx="0" fill="rgba(99,230,190,.04)"/>
+  <rect x="240" y="60" width="200" height="80" rx="0" fill="rgba(255,192,120,.06)"/>
+  <rect x="440" y="60" width="160" height="80" rx="0" fill="rgba(255,107,107,.06)"/>
+  <rect x="600" y="60" width="120" height="80" rx="0" fill="rgba(255,107,107,.12)"/>
+
+  <text x="140" y="90" text-anchor="middle" fill="#63e6be" font-size="10" font-weight="600">Normal</text>
+  <text x="340" y="85" text-anchor="middle" fill="#ffc078" font-size="10" font-weight="600">Problem starts</text>
+  <text x="340" y="100" text-anchor="middle" fill="#ffc078" font-size="9">(~1% affected)</text>
+  <text x="520" y="85" text-anchor="middle" fill="#ff6b6b" font-size="10" font-weight="600">Problem spreads</text>
+  <text x="520" y="100" text-anchor="middle" fill="#ff6b6b" font-size="9">(~5%+ affected)</text>
+  <text x="660" y="85" text-anchor="middle" fill="#ff6b6b" font-size="10" font-weight="700">Outage</text>
+  <text x="660" y="100" text-anchor="middle" fill="#ff6b6b" font-size="9">(everyone)</text>
+
+  <!-- P99 detection -->
+  <line x1="300" y1="55" x2="300" y2="145" stroke="#b197fc" stroke-width="2"/>
+  <text x="300" y="165" text-anchor="middle" fill="#b197fc" font-size="11" font-weight="700">P99 alerts ⚡</text>
+  <text x="300" y="180" text-anchor="middle" fill="var(--fg2)" font-size="9">Early warning</text>
+
+  <!-- P95 detection -->
+  <line x1="490" y1="55" x2="490" y2="145" stroke="#ffc078" stroke-width="2"/>
+  <text x="490" y="165" text-anchor="middle" fill="#ffc078" font-size="11" font-weight="700">P95 alerts 🔔</text>
+  <text x="490" y="180" text-anchor="middle" fill="var(--fg2)" font-size="9">Widespread issue</text>
+
+  <!-- Delta -->
+  <line x1="310" y1="48" x2="480" y2="48" stroke="var(--fg2)" stroke-width="1" stroke-dasharray="4 3"/>
+  <text x="395" y="43" text-anchor="middle" fill="var(--accent)" font-size="10" font-weight="700">← Golden time to fix →</text>
+</svg>
+</div>
+
+<h3>Three Scenarios</h3>
+
+<div class="scenario">
+  <div class="scenario-icon">🗑️</div>
+  <div>
+    <strong>Scenario A: GC Pause</strong> — affects ~1% of requests
+    <table style="margin-top:.5rem">
+      <tr><td>P95</td><td style="color:var(--accent2)">15ms ✅ Normal</td></tr>
+      <tr><td>P99</td><td style="color:var(--danger)">500ms 🚨 Detected!</td></tr>
+    </table>
+    <p style="margin-top:.5rem;font-size:.85rem;color:var(--fg2)"><strong>Only P99 can see this.</strong> The issue affects fewer than 5% of requests.</p>
+  </div>
+</div>
+
+<div class="scenario">
+  <div class="scenario-icon">🗄️</div>
+  <div>
+    <strong>Scenario B: DB Pool Exhaustion</strong> — affects ~10% of requests
+    <table style="margin-top:.5rem">
+      <tr><td>P95</td><td style="color:var(--danger)">300ms 🔔 Detected!</td></tr>
+      <tr><td>P99</td><td style="color:var(--danger)">300ms 🚨 Also detected</td></tr>
+    </table>
+    <p style="margin-top:.5rem;font-size:.85rem;color:var(--fg2)"><strong>Both detect this.</strong> The issue affects more than 5%.</p>
+  </div>
+</div>
+
+<div class="scenario">
+  <div class="scenario-icon">📈</div>
+  <div>
+    <strong>Scenario C: Gradual Memory Leak</strong> — gets worse over time
+    <table style="margin-top:.5rem">
+      <tr><th>Time</th><th>P95</th><th>P99</th></tr>
+      <tr><td>Hour 1</td><td>80ms</td><td>150ms</td></tr>
+      <tr><td>Hour 2</td><td>85ms</td><td>180ms</td></tr>
+      <tr><td>Hour 3</td><td style="color:var(--fg)">95ms</td><td style="color:var(--warn)">250ms ⚠</td></tr>
+      <tr><td>Hour 4</td><td style="color:var(--warn)">130ms ⚠</td><td style="color:var(--danger)">500ms 🚨</td></tr>
+      <tr><td>Hour 5</td><td style="color:var(--danger)">300ms 🔔</td><td style="color:var(--danger)">2000ms 🔥</td></tr>
+    </table>
+    <p style="margin-top:.5rem;font-size:.85rem;color:var(--fg2)"><strong>P99 detects 1–2 hours earlier.</strong> This gives you time to fix the problem before it affects many users.</p>
+  </div>
+</div>
+
+<div class="g2" style="margin-top:1.5rem">
+  <div class="card" style="border-color:var(--warn)">
+    <h3 style="color:var(--warn)">P95 — The Heat Sensor 🌡️</h3>
+    <ul>
+      <li>Detects <strong>widespread</strong> problems</li>
+      <li>Stable signal, few false alarms</li>
+      <li>"Is the problem affecting <strong>many</strong> users?"</li>
+      <li>When P95 alerts → act <strong>immediately</strong></li>
+    </ul>
+  </div>
+  <div class="card" style="border-color:var(--purple)">
+    <h3 style="color:var(--purple)">P99 — The Smoke Detector 💨</h3>
+    <ul>
+      <li>Detects problems <strong>early</strong></li>
+      <li>More sensitive, may have noise</li>
+      <li>"Is <strong>any</strong> user having a bad experience?"</li>
+      <li>When P99 alerts → <strong>investigate</strong></li>
+    </ul>
+  </div>
+</div>
+</section>
+
+<!-- ═══ MONITORING ═══ -->
+<section id="monitoring">
+<h2>7 — Monitoring: Which Metric Answers Which Question?</h2>
+
+<table>
+  <tr><th>Question</th><th>Use This</th></tr>
+  <tr><td>"Do most users have a good experience?"</td><td><span class="tag t-green">P50</span> or <span class="tag t-green">P75</span></td></tr>
+  <tr><td>"Is a degradation starting?"</td><td><span class="tag t-blue">P99</span> — most sensitive</td></tr>
+  <tr><td>"Has the problem spread to many users?"</td><td><span class="tag t-orange">P95</span></td></tr>
+  <tr><td>"What is the worst-case latency?"</td><td><span class="tag t-red">P99.9</span> or <span class="tag t-red">Max</span></td></tr>
+  <tr><td>"Is our SLA at risk?"</td><td>The metric in the SLA (usually <span class="tag t-orange">P95</span> or <span class="tag t-blue">P99</span>)</td></tr>
+  <tr><td>"What is the overall capacity?"</td><td><span class="tag t-green">Average</span> — only for capacity math, <strong>not</strong> for alerting</td></tr>
+</table>
+
+<div class="tip">
+  <strong>💡 Rule:</strong> Never use <strong>average</strong> for alerting. Use it only for capacity planning with Little's Law (L = λ × W). For quality and alerting, always use percentiles.
+</div>
+</section>
+
+<!-- ═══ STRATEGY ═══ -->
+<section id="strategy">
+<h2>8 — Alert Strategy</h2>
+
+<div class="dia">
+<svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg">
+  <text x="380" y="25" text-anchor="middle" fill="#fff" font-size="14" font-weight="700">Three-Tier Alert Strategy</text>
+
+  <!-- Tier 1: P99 -->
+  <rect x="40" y="50" width="680" height="65" rx="12" fill="rgba(177,151,252,.06)" stroke="#b197fc" stroke-width="1.5"/>
+  <text x="80" y="75" fill="#b197fc" font-size="12" font-weight="700">⚠ Tier 1 — P99 exceeds threshold</text>
+  <text x="80" y="98" fill="var(--fg2)" font-size="10">Action: Investigate. Check logs. Look for GC pauses, slow queries, or network issues.</text>
+  <text x="680" y="88" text-anchor="end" fill="#b197fc" font-size="20" font-weight="800">👀</text>
+
+  <!-- Tier 2: P95 -->
+  <rect x="40" y="130" width="680" height="65" rx="12" fill="rgba(255,192,120,.06)" stroke="#ffc078" stroke-width="1.5"/>
+  <text x="80" y="155" fill="#ffc078" font-size="12" font-weight="700">🔔 Tier 2 — P95 exceeds threshold</text>
+  <text x="80" y="178" fill="var(--fg2)" font-size="10">Action: Act now. The problem affects 5%+ of users. Scale up or enable circuit breaker.</text>
+  <text x="680" y="168" text-anchor="end" fill="#ffc078" font-size="20" font-weight="800">🛠️</text>
+
+  <!-- Tier 3: Both -->
+  <rect x="40" y="210" width="680" height="65" rx="12" fill="rgba(255,107,107,.06)" stroke="#ff6b6b" stroke-width="1.5"/>
+  <text x="80" y="235" fill="#ff6b6b" font-size="12" font-weight="700">🔥 Tier 3 — Both P95 and P99 increase rapidly</text>
+  <text x="80" y="258" fill="var(--fg2)" font-size="10">Action: Escalate. Declare incident. Activate runbook. Notify the on-call team.</text>
+  <text x="680" y="248" text-anchor="end" fill="#ff6b6b" font-size="20" font-weight="800">🚒</text>
+</svg>
+</div>
+
+<div class="note">
+  <strong>Summary:</strong> P99 is the smoke detector — it gives you an early warning. P95 is the heat sensor — when it triggers, the fire has already spread. You need <strong>both</strong> for effective monitoring. And never rely on averages alone.
+</div>
+</section>
+
+</main>
+
+<footer>
+  Measuring Latency — Percentiles, Distributions &amp; Monitoring &mdash; Written in ASD-STE100 &mdash; 2026
+</footer>
+
+<!-- ═══════ JAVASCRIPT ═══════ -->
+<script>
+// ── SCROLL REVEAL ──
+const io = new IntersectionObserver(es => {
+  es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); }});
+}, { threshold: 0.08 });
+document.querySelectorAll('section').forEach(s => io.observe(s));
+
+// ── NAV HIGHLIGHT ──
+const navIO = new IntersectionObserver(es => {
+  es.forEach(e => {
+    if (e.isIntersecting) {
+      document.querySelectorAll('nav a').forEach(l => l.classList.remove('active'));
+      const l = document.querySelector(`nav a[href="#${e.target.id}"]`);
+      if (l) l.classList.add('active');
+    }
+  });
+}, { rootMargin: '-35% 0px -60% 0px' });
+document.querySelectorAll('section').forEach(s => navIO.observe(s));
+
+// ── HELPERS ──
+function percentile(arr, p) {
+  const s = arr.slice().sort((a, b) => a - b);
+  const i = Math.ceil(p / 100 * s.length) - 1;
+  return s[Math.max(0, i)];
+}
+function avg(arr) { return arr.reduce((a, b) => a + b, 0) / arr.length; }
+function randNorm(mu, sigma) {
+  let u = 0, v = 0;
+  while (u === 0) u = Math.random();
+  while (v === 0) v = Math.random();
+  return mu + sigma * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+// ── HISTOGRAM RENDERER ──
+function renderHisto(container, data, opts = {}) {
+  const el = typeof container === 'string' ? document.getElementById(container) : container;
+  el.innerHTML = '';
+  const sorted = data.slice().sort((a, b) => a - b);
+  const min = sorted[0], max = sorted[sorted.length - 1];
+  const bins = opts.bins || 50;
+  const bw = (max - min) / bins || 1;
+  const counts = new Array(bins).fill(0);
+  data.forEach(v => { const b = Math.min(Math.floor((v - min) / bw), bins - 1); counts[b]++; });
+  const maxC = Math.max(...counts);
+
+  counts.forEach((c, i) => {
+    const bar = document.createElement('div');
+    bar.className = 'histo-bar';
+    const pct = maxC > 0 ? (c / maxC * 100) : 0;
+    const val = min + (i + 0.5) * bw;
+
+    // color by zone
+    const p95v = percentile(data, 95);
+    const p99v = percentile(data, 99);
+    let color = 'rgba(99,230,190,.7)';
+    if (val >= p99v) color = 'rgba(255,107,107,.8)';
+    else if (val >= p95v) color = 'rgba(255,192,120,.75)';
+
+    bar.style.cssText = `height:${pct}%;background:${color}`;
+    bar.title = `${Math.round(val)}ms: ${c} requests`;
+    el.appendChild(bar);
+  });
+
+  return { p50: percentile(data, 50), p90: percentile(data, 90), p95: percentile(data, 95), p99: percentile(data, 99), avg: avg(data), min, max: sorted[sorted.length - 1] };
+}
+
+// ── DISTRIBUTION GENERATORS ──
+function genData(type, n = 500) {
+  const d = [];
+  if (type === 'normal') {
+    for (let i = 0; i < n; i++) d.push(Math.max(1, randNorm(50, 12)));
+  } else if (type === 'longtail') {
+    for (let i = 0; i < n; i++) {
+      d.push(Math.random() < 0.92 ? Math.max(1, randNorm(15, 4)) : Math.max(50, randNorm(300, 100)));
+    }
+  } else if (type === 'bimodal') {
+    for (let i = 0; i < n; i++) {
+      d.push(Math.random() < 0.6 ? Math.max(1, randNorm(20, 5)) : Math.max(1, randNorm(120, 20)));
+    }
+  } else if (type === 'uniform') {
+    for (let i = 0; i < n; i++) d.push(5 + Math.random() * 195);
+  } else if (type === 'spiky') {
+    for (let i = 0; i < n; i++) {
+      d.push(Math.random() < 0.97 ? Math.max(1, randNorm(12, 3)) : Math.max(200, randNorm(500, 80)));
+    }
+  }
+  return d;
+}
+
+function genDist(type, btn) {
+  document.querySelectorAll('.ctrl button').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+
+  const data = genData(type);
+  document.getElementById('sampleCount').textContent = data.length;
+  const stats = renderHisto('histo', data);
+
+  // markers
+  const mk = document.getElementById('pctMarkers');
+  mk.innerHTML = [
+    `<div class="pct-marker"><span class="pct-dot" style="background:#63e6be"></span>P50 = ${Math.round(stats.p50)}ms</div>`,
+    `<div class="pct-marker"><span class="pct-dot" style="background:#6ea8fe"></span>P90 = ${Math.round(stats.p90)}ms</div>`,
+    `<div class="pct-marker"><span class="pct-dot" style="background:#ffc078"></span>P95 = ${Math.round(stats.p95)}ms</div>`,
+    `<div class="pct-marker"><span class="pct-dot" style="background:#ff6b6b"></span>P99 = ${Math.round(stats.p99)}ms</div>`,
+    `<div class="pct-marker"><span class="pct-dot" style="background:#8b90a5"></span>Avg = ${Math.round(stats.avg)}ms</div>`,
+  ].join('');
+
+  // table
+  const tbl = document.getElementById('pctTable');
+  const diff99 = (stats.p99 / stats.p50).toFixed(1);
+  tbl.innerHTML = `
+    <tr><th>Metric</th><th>Value</th><th>Interpretation</th></tr>
+    <tr><td>Average</td><td>${Math.round(stats.avg)} ms</td><td>Capacity planning only</td></tr>
+    <tr><td>P50</td><td>${Math.round(stats.p50)} ms</td><td>Typical user experience</td></tr>
+    <tr><td>P95</td><td>${Math.round(stats.p95)} ms</td><td>5% of users are slower than this</td></tr>
+    <tr><td>P99</td><td>${Math.round(stats.p99)} ms</td><td>Worst 1% — <strong>${diff99}× the median</strong></td></tr>
+    <tr><td>Max</td><td>${Math.round(stats.max)} ms</td><td>Single worst request</td></tr>`;
+}
+
+// ── COMPARE SECTION ──
+function initCompare() {
+  // Service A: stable
+  const dA = [];
+  for (let i = 0; i < 500; i++) dA.push(Math.max(1, randNorm(50, 3)));
+  const sA = renderHisto('histoA', dA, { bins: 30 });
+  document.getElementById('tableA').innerHTML = `
+    <tr><th>Metric</th><th>Value</th></tr>
+    <tr><td>Average</td><td>${Math.round(sA.avg)} ms</td></tr>
+    <tr><td>P50</td><td>${Math.round(sA.p50)} ms</td></tr>
+    <tr><td>P95</td><td style="color:var(--accent2)">${Math.round(sA.p95)} ms</td></tr>
+    <tr><td>P99</td><td style="color:var(--accent2)">${Math.round(sA.p99)} ms</td></tr>`;
+
+  // Service B: long tail
+  const dB = [];
+  for (let i = 0; i < 500; i++) {
+    dB.push(Math.random() < 0.9 ? Math.max(1, randNorm(12, 4)) : Math.max(100, randNorm(350, 80)));
+  }
+  const sB = renderHisto('histoB', dB, { bins: 30 });
+  document.getElementById('tableB').innerHTML = `
+    <tr><th>Metric</th><th>Value</th></tr>
+    <tr><td>Average</td><td>${Math.round(sB.avg)} ms</td></tr>
+    <tr><td>P50</td><td>${Math.round(sB.p50)} ms</td></tr>
+    <tr><td>P95</td><td style="color:var(--danger)">${Math.round(sB.p95)} ms</td></tr>
+    <tr><td>P99</td><td style="color:var(--danger)">${Math.round(sB.p99)} ms</td></tr>`;
+}
+
+// ── FANOUT CALCULATOR ──
+function calcFanout() {
+  const n = parseInt(document.getElementById('fanoutSlider').value);
+  const p = parseFloat(document.getElementById('fanoutP').value) / 100;
+  document.getElementById('fanoutN').textContent = n;
+  document.getElementById('fanoutPVal').textContent = (p * 100).toFixed(1) + '%';
+
+  const pAll = Math.pow(p, n);
+  const affected = ((1 - pAll) * 100).toFixed(1);
+
+  let color = pAll > 0.95 ? 'var(--accent2)' : (pAll > 0.85 ? 'var(--warn)' : 'var(--danger)');
+  document.getElementById('fanoutResult').innerHTML =
+    `<span style="color:${color};font-size:2rem">${(pAll * 100).toFixed(1)}%</span>
+     <span style="color:var(--fg2);font-size:1rem"> of requests hit all ${n} services fast</span><br>
+     <span style="color:${color};font-size:1.1rem;font-weight:600">${affected}% of users experience at least one slow service</span>`;
+  document.getElementById('fanoutResult').style.borderColor = color;
+  document.getElementById('fanoutResult').style.background = `linear-gradient(135deg,${color}08,${color}03)`;
+  document.getElementById('fanoutResult').style.border = `1px solid ${color}44`;
+}
+
+// ── INIT ──
+genDist('normal', document.querySelector('.ctrl button'));
+initCompare();
+calcFanout();
+</script>
+
+</body>
+</html>

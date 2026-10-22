@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Latency &amp; Throughput — A Visual Guide for Distributed Systems</title>
+<style>
+/* ───────── RESET & BASE ───────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--bg2:#161822;--bg3:#1e2030;
+  --fg:#c8cad8;--fg2:#a0a3b5;--accent:#6c9eff;--accent2:#56d4a0;
+  --warn:#ffa657;--danger:#ff6b6b;--purple:#c792ea;
+  --card:#1a1d2e;--border:#2a2d3e;
+  --radius:12px;--shadow:0 4px 24px rgba(0,0,0,.35);
+}
+html{scroll-behavior:smooth;font-size:16px}
+body{
+  font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+  background:var(--bg);color:var(--fg);line-height:1.7;
+  overflow-x:hidden;
+}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* ───────── NAVIGATION ───────── */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  background:rgba(15,17,23,.92);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);padding:0 2rem;
+}
+nav ul{display:flex;gap:1.5rem;list-style:none;max-width:1200px;margin:auto;overflow-x:auto}
+nav li a{
+  display:block;padding:.85rem .25rem;font-size:.82rem;
+  color:var(--fg2);border-bottom:2px solid transparent;
+  transition:all .25s;white-space:nowrap;
+}
+nav li a:hover,nav li a.active{color:var(--accent);border-color:var(--accent);text-decoration:none}
+
+/* ───────── LAYOUT ───────── */
+main{max-width:960px;margin:0 auto;padding:5rem 1.5rem 4rem}
+section{margin-bottom:4.5rem;animation:fadeUp .6s both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:none}}
+
+h1{font-size:2.6rem;font-weight:800;color:#fff;margin-bottom:.5rem;letter-spacing:-.02em}
+h2{
+  font-size:1.6rem;font-weight:700;color:#fff;margin:2.5rem 0 1rem;
+  padding-bottom:.5rem;border-bottom:2px solid var(--border);
+}
+h3{font-size:1.15rem;font-weight:600;color:var(--accent);margin:1.8rem 0 .6rem}
+p{margin-bottom:1rem}
+.subtitle{font-size:1.15rem;color:var(--fg2);margin-bottom:2.5rem}
+
+/* ───────── CARD ───────── */
+.card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius);padding:1.5rem;margin:1.2rem 0;
+  box-shadow:var(--shadow);transition:transform .2s,box-shadow .2s;
+}
+.card:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,.45)}
+
+/* ───────── FORMULA BOX ───────── */
+.formula{
+  background:linear-gradient(135deg,#1a2340,#1e2848);
+  border-left:4px solid var(--accent);border-radius:var(--radius);
+  padding:1.5rem 2rem;margin:1.5rem 0;text-align:center;
+  font-size:1.6rem;font-weight:700;color:#fff;
+  letter-spacing:.04em;
+}
+.formula small{display:block;font-size:.82rem;color:var(--fg2);font-weight:400;margin-top:.5rem}
+
+/* ───────── TABLE ───────── */
+table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.9rem}
+th{background:var(--bg3);color:var(--accent);text-align:left;padding:.75rem 1rem;font-weight:600}
+td{padding:.65rem 1rem;border-bottom:1px solid var(--border)}
+tr:hover td{background:rgba(108,158,255,.06)}
+
+/* ───────── DIAGRAM CONTAINERS ───────── */
+.diagram-wrap{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:var(--radius);padding:1.5rem;margin:1.5rem 0;
+  overflow-x:auto;
+}
+.diagram-wrap svg{display:block;margin:0 auto;max-width:100%;height:auto}
+
+/* ───────── INTERACTIVE CALCULATOR ───────── */
+.calc-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin:1rem 0}
+.calc-grid label{font-size:.85rem;color:var(--fg2);display:block;margin-bottom:.3rem}
+.calc-grid input{
+  width:100%;padding:.6rem .8rem;border:1px solid var(--border);
+  border-radius:8px;background:var(--bg);color:#fff;font-size:1rem;
+  transition:border-color .2s;
+}
+.calc-grid input:focus{outline:none;border-color:var(--accent)}
+.calc-result{
+  text-align:center;padding:1.2rem;margin-top:1rem;
+  border-radius:var(--radius);font-size:1.1rem;
+  background:linear-gradient(135deg,rgba(86,212,160,.1),rgba(108,158,255,.1));
+  border:1px solid rgba(86,212,160,.3);color:var(--accent2);font-weight:600;
+}
+
+/* ───────── UTILIZATION SLIDER ───────── */
+.slider-wrap{margin:1rem 0}
+.slider-wrap input[type=range]{
+  -webkit-appearance:none;width:100%;height:8px;
+  border-radius:4px;background:var(--bg3);outline:none;
+}
+.slider-wrap input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:22px;height:22px;border-radius:50%;
+  background:var(--accent);cursor:pointer;border:3px solid var(--bg);
+  box-shadow:0 0 8px rgba(108,158,255,.5);
+}
+.bar-chart{display:flex;align-items:flex-end;gap:4px;height:200px;margin:1rem 0}
+.bar{
+  flex:1;border-radius:4px 4px 0 0;transition:height .4s ease;
+  position:relative;min-width:20px;cursor:pointer;
+}
+.bar::after{
+  content:attr(data-label);position:absolute;bottom:-22px;left:50%;
+  transform:translateX(-50%);font-size:.65rem;color:var(--fg2);white-space:nowrap;
+}
+.bar-tooltip{
+  position:absolute;top:-32px;left:50%;transform:translateX(-50%);
+  background:var(--bg);color:#fff;font-size:.72rem;padding:2px 8px;
+  border-radius:4px;white-space:nowrap;opacity:0;transition:opacity .2s;
+  pointer-events:none;border:1px solid var(--border);
+}
+.bar:hover .bar-tooltip{opacity:1}
+
+/* ───────── QUEUE ANIMATION ───────── */
+.queue-scene{
+  position:relative;height:120px;background:var(--bg);
+  border-radius:var(--radius);overflow:hidden;margin:1rem 0;
+}
+.queue-item{
+  position:absolute;width:36px;height:36px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:.7rem;font-weight:700;color:#fff;
+}
+.queue-server{
+  position:absolute;right:24px;top:50%;transform:translateY(-50%);
+  width:80px;height:60px;border-radius:12px;
+  background:linear-gradient(135deg,var(--accent),var(--purple));
+  display:flex;align-items:center;justify-content:center;
+  font-size:.7rem;font-weight:700;color:#fff;
+}
+
+/* ───────── NOTE / TIP BOXES ───────── */
+.note,.tip,.warn-box{
+  border-radius:var(--radius);padding:1rem 1.2rem;margin:1.2rem 0;font-size:.9rem;
+}
+.note{background:rgba(108,158,255,.08);border-left:4px solid var(--accent)}
+.tip{background:rgba(86,212,160,.08);border-left:4px solid var(--accent2)}
+.warn-box{background:rgba(255,107,107,.08);border-left:4px solid var(--danger)}
+
+/* ───────── TAGS / PILLS ───────── */
+.tag{
+  display:inline-block;padding:.15rem .6rem;border-radius:20px;
+  font-size:.75rem;font-weight:600;margin-right:.3rem;
+}
+.tag-blue{background:rgba(108,158,255,.15);color:var(--accent)}
+.tag-green{background:rgba(86,212,160,.15);color:var(--accent2)}
+.tag-orange{background:rgba(255,166,87,.15);color:var(--warn)}
+
+/* ───────── ACCORDION ───────── */
+details{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius);margin:.8rem 0;
+}
+details summary{
+  padding:1rem 1.2rem;cursor:pointer;font-weight:600;color:#fff;
+  list-style:none;display:flex;align-items:center;gap:.5rem;
+}
+details summary::before{content:'▸';transition:transform .2s;font-size:.9rem;color:var(--accent)}
+details[open] summary::before{transform:rotate(90deg)}
+details .inner{padding:0 1.2rem 1.2rem}
+
+/* ───────── COMPARISON GRID ───────── */
+.cmp-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;margin:1rem 0}
+@media(max-width:640px){.cmp-grid,.calc-grid{grid-template-columns:1fr}}
+
+/* ───────── FOOTER ───────── */
+footer{text-align:center;padding:2rem;color:var(--fg2);font-size:.8rem;border-top:1px solid var(--border)}
+</style>
+</head>
+<body>
+
+<!-- ════════ NAVIGATION ════════ -->
+<nav>
+<ul>
+  <li><a href="#intro">Introduction</a></li>
+  <li><a href="#definitions">Definitions</a></li>
+  <li><a href="#latency">Latency</a></li>
+  <li><a href="#throughput">Throughput</a></li>
+  <li><a href="#relation">Relationship</a></li>
+  <li><a href="#little">Little's Law</a></li>
+  <li><a href="#queue">Queueing</a></li>
+  <li><a href="#calc">Calculator</a></li>
+  <li><a href="#tradeoffs">Trade-offs</a></li>
+  <li><a href="#best">Best Practices</a></li>
+</ul>
+</nav>
+
+<!-- ════════ MAIN ════════ -->
+<main>
+
+<!-- ──── INTRO ──── -->
+<section id="intro">
+<h1>Latency &amp; Throughput</h1>
+<p class="subtitle">A Visual Guide for Distributed System Design</p>
+<p>This document explains two important performance measures: <strong>Latency</strong> and <strong>Throughput</strong>. These measures have a strong mathematical relationship. If you change one, the other also changes.</p>
+<div class="note">
+  <strong>About this document:</strong> The text follows ASD-STE100 (Simplified Technical English) rules — short sentences, approved words, active voice, and clear structure.
+</div>
+</section>
+
+<!-- ──── DEFINITIONS ──── -->
+<section id="definitions">
+<h2>1 &mdash; Core Definitions</h2>
+
+<div class="cmp-grid">
+  <div class="card">
+    <h3>⏱ Latency</h3>
+    <p>Latency is the total time for one request to go through the system. It starts when the client sends the request. It ends when the client gets the response.</p>
+    <p><span class="tag tag-blue">Unit: milliseconds (ms)</span></p>
+    <p><strong>Lower is better.</strong></p>
+  </div>
+  <div class="card">
+    <h3>📊 Throughput</h3>
+    <p>Throughput is the number of requests that the system completes in one unit of time. A high throughput means that the system does more work.</p>
+    <p><span class="tag tag-green">Unit: requests/second (rps)</span></p>
+    <p><strong>Higher is better.</strong></p>
+  </div>
+</div>
+
+<div class="card" style="margin-top:1rem">
+  <h3>📡 Related Terms</h3>
+  <table>
+    <tr><th>Term</th><th>Definition</th><th>Relation</th></tr>
+    <tr><td><strong>Bandwidth</strong></td><td>The maximum capacity of a channel. It is the theoretical upper limit.</td><td>Ceiling for Throughput</td></tr>
+    <tr><td><strong>Throughput</strong></td><td>The actual rate of successful data transfer. It is always ≤ Bandwidth.</td><td>Actual work done</td></tr>
+    <tr><td><strong>Goodput</strong></td><td>The rate of <em>useful</em> data only. It does not include retransmissions, headers, or protocol overhead.</td><td>Always ≤ Throughput</td></tr>
+  </table>
+</div>
+
+<!-- Bandwidth > Throughput > Goodput diagram -->
+<div class="diagram-wrap">
+  <svg viewBox="0 0 700 120" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="gBW" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#6c9eff" stop-opacity=".25"/><stop offset="100%" stop-color="#6c9eff" stop-opacity=".05"/></linearGradient>
+      <linearGradient id="gTP" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#56d4a0" stop-opacity=".3"/><stop offset="100%" stop-color="#56d4a0" stop-opacity=".08"/></linearGradient>
+      <linearGradient id="gGP" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#c792ea" stop-opacity=".35"/><stop offset="100%" stop-color="#c792ea" stop-opacity=".1"/></linearGradient>
+    </defs>
+    <rect x="20" y="15" width="660" height="30" rx="6" fill="url(#gBW)" stroke="#6c9eff" stroke-width="1.5"/>
+    <text x="350" y="35" text-anchor="middle" fill="#6c9eff" font-size="13" font-weight="700">Bandwidth (theoretical max)</text>
+    <rect x="20" y="52" width="500" height="30" rx="6" fill="url(#gTP)" stroke="#56d4a0" stroke-width="1.5"/>
+    <text x="270" y="72" text-anchor="middle" fill="#56d4a0" font-size="13" font-weight="700">Throughput (actual)</text>
+    <rect x="20" y="89" width="360" height="30" rx="6" fill="url(#gGP)" stroke="#c792ea" stroke-width="1.5"/>
+    <text x="200" y="109" text-anchor="middle" fill="#c792ea" font-size="13" font-weight="700">Goodput (useful only)</text>
+  </svg>
+</div>
+</section>
+
+<!-- ──── LATENCY BREAKDOWN ──── -->
+<section id="latency">
+<h2>2 &mdash; Latency: Components</h2>
+<p>Total latency at any node has two parts:</p>
+
+<div class="formula">
+  R = W<sub>q</sub> + S
+  <small>R = Total Latency &nbsp;|&nbsp; W<sub>q</sub> = Waiting Time in Queue &nbsp;|&nbsp; S = Service Time</small>
+</div>
+
+<p>When a request goes across the network, latency has four parts:</p>
+
+<!-- Network latency breakdown diagram -->
+<div class="diagram-wrap">
+  <svg viewBox="0 0 800 220" xmlns="http://www.w3.org/2000/svg">
+    <!-- Arrows -->
+    <defs>
+      <marker id="arr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="var(--fg2)"/></marker>
+    </defs>
+
+    <!-- Client -->
+    <rect x="20" y="70" width="90" height="50" rx="10" fill="#1e2848" stroke="#6c9eff" stroke-width="1.5"/>
+    <text x="65" y="100" text-anchor="middle" fill="#fff" font-size="12" font-weight="600">Client</text>
+
+    <!-- Arrow 1 -->
+    <line x1="115" y1="95" x2="175" y2="95" stroke="var(--fg2)" stroke-width="1.5" marker-end="url(#arr)"/>
+
+    <!-- Propagation -->
+    <rect x="180" y="50" width="120" height="90" rx="10" fill="#1a2340" stroke="#ffa657" stroke-width="1.5"/>
+    <text x="240" y="82" text-anchor="middle" fill="#ffa657" font-size="11" font-weight="700">Propagation</text>
+    <text x="240" y="100" text-anchor="middle" fill="var(--fg2)" font-size="9">distance ÷ speed</text>
+    <text x="240" y="116" text-anchor="middle" fill="var(--fg2)" font-size="9">of medium</text>
+
+    <!-- Arrow 2 -->
+    <line x1="305" y1="95" x2="335" y2="95" stroke="var(--fg2)" stroke-width="1.5" marker-end="url(#arr)"/>
+
+    <!-- Transmission -->
+    <rect x="340" y="50" width="120" height="90" rx="10" fill="#1a2340" stroke="#56d4a0" stroke-width="1.5"/>
+    <text x="400" y="82" text-anchor="middle" fill="#56d4a0" font-size="11" font-weight="700">Transmission</text>
+    <text x="400" y="100" text-anchor="middle" fill="var(--fg2)" font-size="9">message size</text>
+    <text x="400" y="116" text-anchor="middle" fill="var(--fg2)" font-size="9">÷ bandwidth</text>
+
+    <!-- Arrow 3 -->
+    <line x1="465" y1="95" x2="495" y2="95" stroke="var(--fg2)" stroke-width="1.5" marker-end="url(#arr)"/>
+
+    <!-- Queuing -->
+    <rect x="500" y="50" width="120" height="90" rx="10" fill="#1a2340" stroke="#c792ea" stroke-width="1.5"/>
+    <text x="560" y="82" text-anchor="middle" fill="#c792ea" font-size="11" font-weight="700">Queuing</text>
+    <text x="560" y="100" text-anchor="middle" fill="var(--fg2)" font-size="9">wait at routers</text>
+    <text x="560" y="116" text-anchor="middle" fill="var(--fg2)" font-size="9">& switches</text>
+
+    <!-- Arrow 4 -->
+    <line x1="625" y1="95" x2="655" y2="95" stroke="var(--fg2)" stroke-width="1.5" marker-end="url(#arr)"/>
+
+    <!-- Processing -->
+    <rect x="660" y="50" width="120" height="90" rx="10" fill="#1a2340" stroke="#ff6b6b" stroke-width="1.5"/>
+    <text x="720" y="82" text-anchor="middle" fill="#ff6b6b" font-size="11" font-weight="700">Processing</text>
+    <text x="720" y="100" text-anchor="middle" fill="var(--fg2)" font-size="9">header parsing</text>
+    <text x="720" y="116" text-anchor="middle" fill="var(--fg2)" font-size="9">& routing</text>
+
+    <!-- Total bar -->
+    <rect x="180" y="165" width="600" height="32" rx="6" fill="rgba(108,158,255,.1)" stroke="#6c9eff" stroke-width="1"/>
+    <text x="480" y="186" text-anchor="middle" fill="#6c9eff" font-size="12" font-weight="700">Total Network Latency = Propagation + Transmission + Queuing + Processing</text>
+  </svg>
+</div>
+</section>
+
+<!-- ──── THROUGHPUT ──── -->
+<section id="throughput">
+<h2>3 &mdash; Throughput: What Limits It</h2>
+<p>The throughput of a system is always limited by its <strong>slowest component</strong> (the bottleneck).</p>
+
+<div class="diagram-wrap">
+  <svg viewBox="0 0 760 160" xmlns="http://www.w3.org/2000/svg">
+    <text x="20" y="30" fill="var(--fg2)" font-size="12" font-weight="600">Request flow through a pipeline:</text>
+
+    <!-- Pipe segments -->
+    <rect x="20" y="55" width="160" height="60" rx="8" fill="rgba(86,212,160,.12)" stroke="#56d4a0" stroke-width="1.5"/>
+    <text x="100" y="80" text-anchor="middle" fill="#56d4a0" font-size="11" font-weight="700">Load Balancer</text>
+    <text x="100" y="100" text-anchor="middle" fill="var(--fg2)" font-size="10">10,000 rps</text>
+
+    <line x1="185" y1="85" x2="215" y2="85" stroke="var(--fg2)" stroke-width="1.5" marker-end="url(#arr)"/>
+
+    <rect x="220" y="55" width="160" height="60" rx="8" fill="rgba(86,212,160,.12)" stroke="#56d4a0" stroke-width="1.5"/>
+    <text x="300" y="80" text-anchor="middle" fill="#56d4a0" font-size="11" font-weight="700">App Server</text>
+    <text x="300" y="100" text-anchor="middle" fill="var(--fg2)" font-size="10">5,000 rps</text>
+
+    <line x1="385" y1="85" x2="415" y2="85" stroke="var(--fg2)" stroke-width="1.5" marker-end="url(#arr)"/>
+
+    <!-- Bottleneck -->
+    <rect x="420" y="50" width="160" height="70" rx="8" fill="rgba(255,107,107,.15)" stroke="#ff6b6b" stroke-width="2" stroke-dasharray="6 3">
+      <animate attributeName="stroke-opacity" values="1;.4;1" dur="2s" repeatCount="indefinite"/>
+    </rect>
+    <text x="500" y="78" text-anchor="middle" fill="#ff6b6b" font-size="11" font-weight="700">Database</text>
+    <text x="500" y="98" text-anchor="middle" fill="#ff6b6b" font-size="11" font-weight="700">1,000 rps ⚠</text>
+    <text x="500" y="138" text-anchor="middle" fill="#ff6b6b" font-size="10">← BOTTLENECK</text>
+
+    <line x1="585" y1="85" x2="615" y2="85" stroke="var(--fg2)" stroke-width="1.5" marker-end="url(#arr)"/>
+
+    <rect x="620" y="55" width="120" height="60" rx="8" fill="rgba(86,212,160,.12)" stroke="#56d4a0" stroke-width="1.5"/>
+    <text x="680" y="80" text-anchor="middle" fill="#56d4a0" font-size="11" font-weight="700">Cache</text>
+    <text x="680" y="100" text-anchor="middle" fill="var(--fg2)" font-size="10">50,000 rps</text>
+  </svg>
+</div>
+
+<div class="warn-box">
+  <strong>⚠ Key rule:</strong> System throughput = throughput of the slowest component. In this example, the database limits the whole system to <strong>1,000 rps</strong>.
+</div>
+</section>
+
+<!-- ──── RELATIONSHIP ──── -->
+<section id="relation">
+<h2>4 &mdash; The Relationship Between Latency and Throughput</h2>
+<p>Latency and throughput are <strong>not independent</strong>. They are connected through queueing theory and concurrency limits.</p>
+
+<div class="diagram-wrap">
+  <svg viewBox="0 0 700 300" xmlns="http://www.w3.org/2000/svg">
+    <text x="350" y="25" text-anchor="middle" fill="#fff" font-size="14" font-weight="700">How Latency Changes With Load</text>
+
+    <!-- Axes -->
+    <line x1="80" y1="260" x2="660" y2="260" stroke="var(--fg2)" stroke-width="1.5"/>
+    <line x1="80" y1="260" x2="80" y2="40" stroke="var(--fg2)" stroke-width="1.5"/>
+    <text x="370" y="290" text-anchor="middle" fill="var(--fg2)" font-size="11">Throughput (rps) →</text>
+    <text x="40" y="150" text-anchor="middle" fill="var(--fg2)" font-size="11" transform="rotate(-90 40 150)">Latency (ms) →</text>
+
+    <!-- Zones -->
+    <rect x="80" y="40" width="280" height="220" fill="rgba(86,212,160,.05)"/>
+    <rect x="360" y="40" width="180" height="220" fill="rgba(255,166,87,.05)"/>
+    <rect x="540" y="40" width="120" height="220" fill="rgba(255,107,107,.08)"/>
+
+    <text x="220" y="252" text-anchor="middle" fill="#56d4a0" font-size="10" font-weight="600">Linear Zone</text>
+    <text x="450" y="252" text-anchor="middle" fill="#ffa657" font-size="10" font-weight="600">Saturation Zone</text>
+    <text x="600" y="252" text-anchor="middle" fill="#ff6b6b" font-size="10" font-weight="600">Collapse</text>
+
+    <!-- Curve -->
+    <path d="M 90 240 Q 200 235, 300 225 Q 380 215, 420 200 Q 460 175, 500 140 Q 530 100, 560 60 Q 580 45, 590 42" fill="none" stroke="#6c9eff" stroke-width="2.5">
+      <animate attributeName="stroke-dasharray" values="0 1000;1000 0" dur="2.5s" fill="freeze"/>
+    </path>
+
+    <!-- Throughput curve -->
+    <path d="M 90 240 Q 200 200, 300 150 Q 400 100, 480 85 Q 540 80, 570 82 Q 600 90, 620 105" fill="none" stroke="#56d4a0" stroke-width="2" stroke-dasharray="6 4"/>
+
+    <!-- Labels -->
+    <circle cx="560" cy="60" r="4" fill="#ff6b6b"/>
+    <text x="572" y="55" fill="#ff6b6b" font-size="10" font-weight="600">← Latency explodes</text>
+
+    <text x="540" y="95" fill="#56d4a0" font-size="10" font-weight="600">Throughput ↓</text>
+
+    <!-- Legend -->
+    <line x1="90" y1="50" x2="115" y2="50" stroke="#6c9eff" stroke-width="2.5"/>
+    <text x="120" y="54" fill="#6c9eff" font-size="10">Latency</text>
+    <line x1="200" y1="50" x2="225" y2="50" stroke="#56d4a0" stroke-width="2" stroke-dasharray="6 4"/>
+    <text x="230" y="54" fill="#56d4a0" font-size="10">Throughput</text>
+  </svg>
+</div>
+
+<div class="tip">
+  <strong>💡 Key insight:</strong> At low load, latency is almost flat. But as utilization goes above ~70%, latency increases with a <strong>non-linear</strong> (hyperbolic) curve. At the same time, throughput stops to increase and then decreases because of contention.
+</div>
+</section>
+
+<!-- ──── LITTLE'S LAW ──── -->
+<section id="little">
+<h2>5 &mdash; Little's Law</h2>
+<p>John D.C. Little proved this law in 1961. It connects three important measures of <strong>any stable system</strong>.</p>
+
+<div class="formula">
+  L = λ × W
+  <small>L = concurrent requests in system &nbsp;|&nbsp; λ = throughput (rps) &nbsp;|&nbsp; W = average latency (sec)</small>
+</div>
+
+<div class="note">
+  <strong>Universality:</strong> This law is always correct. It does not depend on the arrival pattern, the service time pattern, or the queue order. It works for CPU, database, network, disk I/O, message queues, and even a checkout line at a supermarket.
+</div>
+
+<h3>Where does Little's Law apply?</h3>
+<div class="diagram-wrap">
+  <svg viewBox="0 0 750 350" xmlns="http://www.w3.org/2000/svg">
+    <!-- Central law -->
+    <rect x="240" y="20" width="270" height="60" rx="14" fill="linear-gradient(135deg,#1e2848,#2a3560)" stroke="#6c9eff" stroke-width="2"/>
+    <text x="375" y="48" text-anchor="middle" fill="#fff" font-size="15" font-weight="700">L = λ × W</text>
+    <text x="375" y="68" text-anchor="middle" fill="var(--fg2)" font-size="10">Works for ALL stable systems</text>
+
+    <!-- Branches -->
+    <line x1="200" y1="80" x2="105" y2="130" stroke="#6c9eff" stroke-width="1" opacity=".5"/>
+    <line x1="310" y1="80" x2="255" y2="130" stroke="#6c9eff" stroke-width="1" opacity=".5"/>
+    <line x1="375" y1="80" x2="375" y2="130" stroke="#6c9eff" stroke-width="1" opacity=".5"/>
+    <line x1="440" y1="80" x2="495" y2="130" stroke="#6c9eff" stroke-width="1" opacity=".5"/>
+    <line x1="550" y1="80" x2="645" y2="130" stroke="#6c9eff" stroke-width="1" opacity=".5"/>
+
+    <!-- CPU -->
+    <rect x="30" y="130" width="150" height="80" rx="10" fill="var(--card)" stroke="var(--border)" stroke-width="1"/>
+    <text x="105" y="155" text-anchor="middle" fill="#ffa657" font-size="11" font-weight="700">🖥 CPU</text>
+    <text x="105" y="175" text-anchor="middle" fill="var(--fg2)" font-size="9">λ = tasks/sec</text>
+    <text x="105" y="192" text-anchor="middle" fill="var(--fg2)" font-size="9">W = CPU time</text>
+
+    <!-- DB Pool -->
+    <rect x="195" y="130" width="150" height="80" rx="10" fill="var(--card)" stroke="var(--border)" stroke-width="1"/>
+    <text x="270" y="155" text-anchor="middle" fill="#56d4a0" font-size="11" font-weight="700">🗄 DB Pool</text>
+    <text x="270" y="175" text-anchor="middle" fill="var(--fg2)" font-size="9">λ = queries/sec</text>
+    <text x="270" y="192" text-anchor="middle" fill="var(--fg2)" font-size="9">W = query time</text>
+
+    <!-- Thread pool -->
+    <rect x="300" y="240" width="150" height="80" rx="10" fill="var(--card)" stroke="var(--border)" stroke-width="1"/>
+    <text x="375" y="265" text-anchor="middle" fill="#c792ea" font-size="11" font-weight="700">🧵 Thread Pool</text>
+    <text x="375" y="285" text-anchor="middle" fill="var(--fg2)" font-size="9">λ = tasks/sec</text>
+    <text x="375" y="302" text-anchor="middle" fill="var(--fg2)" font-size="9">W = task time</text>
+    <line x1="375" y1="210" x2="375" y2="240" stroke="#6c9eff" stroke-width="1" opacity=".5"/>
+
+    <!-- Network -->
+    <rect x="420" y="130" width="150" height="80" rx="10" fill="var(--card)" stroke="var(--border)" stroke-width="1"/>
+    <text x="495" y="155" text-anchor="middle" fill="#6c9eff" font-size="11" font-weight="700">🌐 Network</text>
+    <text x="495" y="175" text-anchor="middle" fill="var(--fg2)" font-size="9">λ = packets/sec</text>
+    <text x="495" y="192" text-anchor="middle" fill="var(--fg2)" font-size="9">W = RTT</text>
+
+    <!-- Queue -->
+    <rect x="585" y="130" width="150" height="80" rx="10" fill="var(--card)" stroke="var(--border)" stroke-width="1"/>
+    <text x="660" y="155" text-anchor="middle" fill="#ff6b6b" font-size="11" font-weight="700">📨 Msg Queue</text>
+    <text x="660" y="175" text-anchor="middle" fill="var(--fg2)" font-size="9">λ = msg/sec</text>
+    <text x="660" y="192" text-anchor="middle" fill="var(--fg2)" font-size="9">W = time in queue</text>
+  </svg>
+</div>
+
+<h3>Example Calculation</h3>
+<div class="card">
+  <p>A service processes <strong>1,000 requests/second</strong> with an average latency of <strong>200 ms</strong>.</p>
+  <div class="formula" style="font-size:1.3rem">
+    L = 1,000 × 0.2 = <span style="color:var(--accent2)">200</span> concurrent requests
+  </div>
+  <table>
+    <tr><th>Worker Slots</th><th>Result</th></tr>
+    <tr><td>150 (< 200)</td><td style="color:var(--danger)">❌ Bottleneck — requests queue up, latency increases</td></tr>
+    <tr><td>200 (= 200)</td><td style="color:var(--accent2)">✅ Correct — matches the actual concurrency</td></tr>
+    <tr><td>500 (> 200)</td><td style="color:var(--warn)">⚠ Waste — 300 slots stay idle, wasted memory & threads</td></tr>
+  </table>
+</div>
+</section>
+
+<!-- ──── QUEUEING THEORY ──── -->
+<section id="queue">
+<h2>6 &mdash; Queueing Theory</h2>
+
+<h3>6.1 Utilization Law</h3>
+<p>When you apply Little's Law only to the processing part (not the queue), you get the <strong>Utilization Law</strong>:</p>
+<div class="formula">
+  ρ = λ × S
+  <small>ρ = utilization (0 to 1) &nbsp;|&nbsp; λ = throughput &nbsp;|&nbsp; S = service time</small>
+</div>
+
+<h3>6.2 The M/M/1 Queue Model</h3>
+<div class="card">
+  <table>
+    <tr><th>Part</th><th>Meaning</th></tr>
+    <tr><td><strong>M</strong> (first)</td><td>Arrivals follow a Poisson distribution (random, memoryless)</td></tr>
+    <tr><td><strong>M</strong> (second)</td><td>Service time follows an Exponential distribution</td></tr>
+    <tr><td><strong>1</strong></td><td>There is only one server (processor)</td></tr>
+  </table>
+  <div class="formula" style="margin-top:1rem">
+    R = S ÷ (1 − ρ)
+    <small>R = total latency &nbsp;|&nbsp; S = service time &nbsp;|&nbsp; ρ = utilization</small>
+  </div>
+</div>
+
+<h3>6.3 The Hockey-Stick Effect</h3>
+<p>Latency does <strong>not</strong> increase at a steady rate. It follows a hyperbolic curve. When utilization approaches 100%, latency goes to infinity.</p>
+
+<!-- Interactive Utilization Chart -->
+<div class="card" style="padding:1.5rem 2rem">
+  <p style="font-weight:600;color:#fff;margin-bottom:1rem">Interactive: Latency at different utilization levels (S = 10ms)</p>
+
+  <div class="bar-chart" id="barChart"></div>
+  <div style="display:flex;justify-content:space-between;margin-top:1.8rem;font-size:.78rem;color:var(--fg2)">
+    <span>10%</span><span>20%</span><span>30%</span><span>40%</span><span>50%</span><span>60%</span><span>70%</span><span>80%</span><span>90%</span><span>95%</span><span>99%</span>
+  </div>
+
+  <table style="margin-top:1.5rem">
+    <tr><th>ρ</th><th>Queue Wait</th><th>Total R</th><th>Multiplier</th><th>Risk</th></tr>
+    <tr><td>50%</td><td>10 ms</td><td>20 ms</td><td>2×</td><td><span class="tag tag-green">Safe</span></td></tr>
+    <tr><td>70%</td><td>23 ms</td><td>33 ms</td><td>3.3×</td><td><span class="tag tag-green">OK</span></td></tr>
+    <tr><td>80%</td><td>40 ms</td><td>50 ms</td><td>5×</td><td><span class="tag tag-orange">Warning</span></td></tr>
+    <tr><td>90%</td><td>90 ms</td><td>100 ms</td><td>10×</td><td><span class="tag tag-orange">High</span></td></tr>
+    <tr><td>95%</td><td>190 ms</td><td>200 ms</td><td>20×</td><td style="color:var(--danger)">🔴 Danger</td></tr>
+    <tr><td>99%</td><td>990 ms</td><td>1,000 ms</td><td>100×</td><td style="color:var(--danger)">🔴 Critical</td></tr>
+  </table>
+</div>
+
+<h3>6.4 Queue Animation</h3>
+<p>This animation shows how requests wait in a queue before the server processes them. The more requests arrive, the longer the queue grows.</p>
+<div class="card">
+  <div class="queue-scene" id="queueScene">
+    <div class="queue-server">SERVER</div>
+  </div>
+  <div style="text-align:center;margin-top:.8rem">
+    <button onclick="spawnRequest()" style="padding:.5rem 1.5rem;border:none;border-radius:8px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer;margin-right:.5rem">+ Send Request</button>
+    <button onclick="clearQueue()" style="padding:.5rem 1.5rem;border:none;border-radius:8px;background:var(--border);color:var(--fg);font-weight:600;cursor:pointer">Clear</button>
+  </div>
+</div>
+
+<h3>6.5 M/G/1 — Variable Service Times</h3>
+<p>In the real world, service times are not the same for all requests. Some queries are fast, some are slow. The <strong>coefficient of variation</strong> (C = σ / μ) measures this variability.</p>
+<div class="formula">
+  UPI = C² × ρ ÷ (1 − ρ)
+  <small>UPI = Unit Performance Index &nbsp;|&nbsp; C = coefficient of variation &nbsp;|&nbsp; ρ = utilization</small>
+</div>
+<div class="warn-box">
+  <strong>⚠ Important:</strong> When C is high (variable workloads), the latency explosion happens <strong>much earlier</strong>. For example, with C = 2, latency at 50% utilization is already 4× the service time — the same as 80% utilization in the M/M/1 model.
+</div>
+</section>
+
+<!-- ──── CALCULATOR ──── -->
+<section id="calc">
+<h2>7 &mdash; Interactive Calculator</h2>
+
+<h3>Little's Law Calculator</h3>
+<div class="card">
+  <div class="calc-grid">
+    <div>
+      <label>λ — Throughput (rps)</label>
+      <input type="number" id="calcLambda" value="1000" min="1" oninput="calcLittle()">
+    </div>
+    <div>
+      <label>W — Latency (ms)</label>
+      <input type="number" id="calcW" value="200" min="1" oninput="calcLittle()">
+    </div>
+    <div>
+      <label>L — Concurrency</label>
+      <input type="text" id="calcL" value="200" readonly style="background:var(--bg3);color:var(--accent2);font-weight:700">
+    </div>
+  </div>
+  <div class="calc-result" id="littleResult">
+    You need at least <strong>200</strong> worker slots to handle this load without queueing.
+  </div>
+</div>
+
+<h3>M/M/1 Latency Calculator</h3>
+<div class="card">
+  <div class="calc-grid">
+    <div>
+      <label>S — Service Time (ms)</label>
+      <input type="number" id="calcS" value="10" min="1" oninput="calcMM1()">
+    </div>
+    <div>
+      <label>ρ — Utilization (%)</label>
+      <input type="number" id="calcRho" value="70" min="1" max="99" oninput="calcMM1()">
+    </div>
+    <div>
+      <label>R — Total Latency (ms)</label>
+      <input type="text" id="calcR" value="33.3" readonly style="background:var(--bg3);color:var(--warn);font-weight:700">
+    </div>
+  </div>
+  <div class="calc-result" id="mm1Result" style="border-color:rgba(255,166,87,.3);color:var(--warn)">
+    At 70% utilization, total latency is <strong>3.3×</strong> the service time.
+  </div>
+</div>
+</section>
+
+<!-- ──── TRADEOFFS ──── -->
+<section id="tradeoffs">
+<h2>8 &mdash; Design Trade-offs</h2>
+<p>You cannot maximize throughput and minimize latency at the same time. There is always a trade-off.</p>
+
+<div class="cmp-grid">
+  <div class="card">
+    <h3 style="color:var(--accent)">Low-Latency Design</h3>
+    <ul style="padding-left:1.2rem;color:var(--fg2)">
+      <li>Keep utilization below 50–70%</li>
+      <li>Use in-memory caches</li>
+      <li>Reduce hops between services</li>
+      <li>Co-locate services in the same region</li>
+      <li>Use connection pooling</li>
+    </ul>
+    <p><span class="tag tag-blue">Example:</span> Real-time trading, gaming, video calls</p>
+  </div>
+  <div class="card">
+    <h3 style="color:var(--accent2)">High-Throughput Design</h3>
+    <ul style="padding-left:1.2rem;color:var(--fg2)">
+      <li>Batch requests together</li>
+      <li>Use asynchronous processing</li>
+      <li>Increase parallelism (more workers)</li>
+      <li>Use message queues for decoupling</li>
+      <li>Accept higher latency for individual requests</li>
+    </ul>
+    <p><span class="tag tag-green">Example:</span> Data pipelines, log processing, batch ETL</p>
+  </div>
+</div>
+
+<details>
+  <summary>When can you optimize both?</summary>
+  <div class="inner">
+    <p>You can improve both only if you <strong>remove the bottleneck</strong>. This usually means:</p>
+    <ul style="padding-left:1.2rem;color:var(--fg2)">
+      <li>Better algorithms (lower S → lower ρ → lower R → higher λ possible)</li>
+      <li>Better hardware (faster CPU, SSD instead of HDD)</li>
+      <li>Caching (bypass the bottleneck completely)</li>
+      <li>Data locality (reduce network hops)</li>
+    </ul>
+  </div>
+</details>
+</section>
+
+<!-- ──── BEST PRACTICES ──── -->
+<section id="best">
+<h2>9 &mdash; Best Practices Summary</h2>
+
+<div class="diagram-wrap">
+  <svg viewBox="0 0 750 400" xmlns="http://www.w3.org/2000/svg">
+    <text x="375" y="28" text-anchor="middle" fill="#fff" font-size="15" font-weight="700">Performance Engineering Checklist</text>
+
+    <!-- Row 1 -->
+    <rect x="20" y="50" width="220" height="90" rx="12" fill="var(--card)" stroke="#56d4a0" stroke-width="1.5"/>
+    <text x="130" y="75" text-anchor="middle" fill="#56d4a0" font-size="12" font-weight="700">1. Measure</text>
+    <text x="130" y="95" text-anchor="middle" fill="var(--fg2)" font-size="10">Use P50, P95, P99 latency</text>
+    <text x="130" y="112" text-anchor="middle" fill="var(--fg2)" font-size="10">not just averages</text>
+
+    <rect x="265" y="50" width="220" height="90" rx="12" fill="var(--card)" stroke="#6c9eff" stroke-width="1.5"/>
+    <text x="375" y="75" text-anchor="middle" fill="#6c9eff" font-size="12" font-weight="700">2. Find Bottleneck</text>
+    <text x="375" y="95" text-anchor="middle" fill="var(--fg2)" font-size="10">Profile each component</text>
+    <text x="375" y="112" text-anchor="middle" fill="var(--fg2)" font-size="10">Identify the slowest one</text>
+
+    <rect x="510" y="50" width="220" height="90" rx="12" fill="var(--card)" stroke="#c792ea" stroke-width="1.5"/>
+    <text x="620" y="75" text-anchor="middle" fill="#c792ea" font-size="12" font-weight="700">3. Apply Little's Law</text>
+    <text x="620" y="95" text-anchor="middle" fill="var(--fg2)" font-size="10">Calculate required</text>
+    <text x="620" y="112" text-anchor="middle" fill="var(--fg2)" font-size="10">concurrency: L = λ × W</text>
+
+    <!-- Row 2 -->
+    <rect x="20" y="165" width="220" height="90" rx="12" fill="var(--card)" stroke="#ffa657" stroke-width="1.5"/>
+    <text x="130" y="190" text-anchor="middle" fill="#ffa657" font-size="12" font-weight="700">4. Keep ρ &lt; 70%</text>
+    <text x="130" y="210" text-anchor="middle" fill="var(--fg2)" font-size="10">Scale out before</text>
+    <text x="130" y="227" text-anchor="middle" fill="var(--fg2)" font-size="10">the hockey-stick zone</text>
+
+    <rect x="265" y="165" width="220" height="90" rx="12" fill="var(--card)" stroke="#ff6b6b" stroke-width="1.5"/>
+    <text x="375" y="190" text-anchor="middle" fill="#ff6b6b" font-size="12" font-weight="700">5. Reduce Variance</text>
+    <text x="375" y="210" text-anchor="middle" fill="var(--fg2)" font-size="10">Split heavy tasks into</text>
+    <text x="375" y="227" text-anchor="middle" fill="var(--fg2)" font-size="10">separate queues</text>
+
+    <rect x="510" y="165" width="220" height="90" rx="12" fill="var(--card)" stroke="#56d4a0" stroke-width="1.5"/>
+    <text x="620" y="190" text-anchor="middle" fill="#56d4a0" font-size="12" font-weight="700">6. Monitor L</text>
+    <text x="620" y="210" text-anchor="middle" fill="var(--fg2)" font-size="10">In-flight requests is the</text>
+    <text x="620" y="227" text-anchor="middle" fill="var(--fg2)" font-size="10">earliest overload signal</text>
+
+    <!-- Row 3 -->
+    <rect x="140" y="280" width="220" height="90" rx="12" fill="var(--card)" stroke="#6c9eff" stroke-width="1.5"/>
+    <text x="250" y="305" text-anchor="middle" fill="#6c9eff" font-size="12" font-weight="700">7. Auto-Scale on ρ</text>
+    <text x="250" y="325" text-anchor="middle" fill="var(--fg2)" font-size="10">Don't wait for timeouts.</text>
+    <text x="250" y="342" text-anchor="middle" fill="var(--fg2)" font-size="10">Scale when ρ approaches limit</text>
+
+    <rect x="385" y="280" width="220" height="90" rx="12" fill="var(--card)" stroke="#c792ea" stroke-width="1.5"/>
+    <text x="495" y="305" text-anchor="middle" fill="#c792ea" font-size="12" font-weight="700">8. Test Under Load</text>
+    <text x="495" y="325" text-anchor="middle" fill="var(--fg2)" font-size="10">Use load tests to find the</text>
+    <text x="495" y="342" text-anchor="middle" fill="var(--fg2)" font-size="10">real saturation point</text>
+  </svg>
+</div>
+
+<div class="tip">
+  <strong>💡 The Golden Rule:</strong> A sustainable distributed system does not try to eliminate latency or push throughput beyond the hardware limit. Instead, it keeps the system in a <strong>dynamic balance</strong> — left of the saturation point — where Goodput stays high and tail latency stays predictable.
+</div>
+</section>
+
+</main>
+
+<footer>
+  Latency &amp; Throughput Visual Guide &mdash; Written in ASD-STE100 Simplified Technical English &mdash; 2026
+</footer>
+
+<!-- ════════ JAVASCRIPT ════════ -->
+<script>
+// ── NAV HIGHLIGHT ──
+const sections = document.querySelectorAll('section');
+const navLinks = document.querySelectorAll('nav a');
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      navLinks.forEach(l => l.classList.remove('active'));
+      const link = document.querySelector(`nav a[href="#${e.target.id}"]`);
+      if (link) link.classList.add('active');
+    }
+  });
+}, { rootMargin: '-40% 0px -55% 0px' });
+sections.forEach(s => observer.observe(s));
+
+// ── BAR CHART ──
+(function() {
+  const S = 10;
+  const rhos = [.1,.2,.3,.4,.5,.6,.7,.8,.9,.95,.99];
+  const chart = document.getElementById('barChart');
+  const maxR = S / (1 - .99);
+
+  rhos.forEach(rho => {
+    const R = S / (1 - rho);
+    const pct = Math.min((R / maxR) * 100, 100);
+    const bar = document.createElement('div');
+    bar.className = 'bar';
+    const hue = rho < .7 ? 150 : (rho < .9 ? 35 : 0);
+    const sat = rho < .7 ? 60 : 70;
+    bar.style.cssText = `height:${pct}%;background:hsl(${hue},${sat}%,55%)`;
+    bar.setAttribute('data-label', `${Math.round(rho*100)}%`);
+
+    const tip = document.createElement('div');
+    tip.className = 'bar-tooltip';
+    tip.textContent = `R = ${R.toFixed(1)} ms`;
+    bar.appendChild(tip);
+
+    chart.appendChild(bar);
+  });
+})();
+
+// ── LITTLE'S LAW CALCULATOR ──
+function calcLittle() {
+  const lam = parseFloat(document.getElementById('calcLambda').value) || 0;
+  const w = parseFloat(document.getElementById('calcW').value) || 0;
+  const L = (lam * w / 1000);
+  document.getElementById('calcL').value = L.toFixed(1);
+  document.getElementById('littleResult').innerHTML =
+    `You need at least <strong>${Math.ceil(L)}</strong> worker slots to handle this load without queueing.`;
+}
+
+// ── M/M/1 CALCULATOR ──
+function calcMM1() {
+  const S = parseFloat(document.getElementById('calcS').value) || 1;
+  const rho = parseFloat(document.getElementById('calcRho').value) / 100 || 0;
+  if (rho >= 1) {
+    document.getElementById('calcR').value = '∞';
+    document.getElementById('mm1Result').innerHTML = `<strong style="color:var(--danger)">System is unstable! ρ must be < 100%.</strong>`;
+    return;
+  }
+  const R = S / (1 - rho);
+  const mult = (R / S).toFixed(1);
+  document.getElementById('calcR').value = R.toFixed(1);
+
+  let color = mult < 4 ? 'var(--accent2)' : (mult < 10 ? 'var(--warn)' : 'var(--danger)');
+  document.getElementById('mm1Result').innerHTML =
+    `At <strong>${Math.round(rho*100)}%</strong> utilization, total latency is <strong style="color:${color}">${mult}×</strong> the service time.`;
+}
+
+// ── QUEUE ANIMATION ──
+let queueItems = [];
+let itemId = 0;
+const colors = ['#6c9eff','#56d4a0','#c792ea','#ffa657','#ff6b6b','#f78fb3','#3dc1d3'];
+
+function spawnRequest() {
+  const scene = document.getElementById('queueScene');
+  const id = ++itemId;
+  const el = document.createElement('div');
+  el.className = 'queue-item';
+  el.style.background = colors[id % colors.length];
+  el.textContent = `#${id}`;
+  el.style.top = '42px';
+
+  const count = queueItems.length;
+  const startX = -40;
+  el.style.left = startX + 'px';
+  scene.appendChild(el);
+
+  // animate into queue position
+  const targetX = 24 + count * 44;
+  requestAnimationFrame(() => {
+    el.style.transition = 'left 0.6s ease, opacity 0.3s';
+    el.style.left = targetX + 'px';
+  });
+
+  queueItems.push(el);
+
+  // auto-process after delay
+  const processDelay = 1200 + count * 800;
+  setTimeout(() => {
+    el.style.left = (scene.offsetWidth - 120) + 'px';
+    el.style.opacity = '0.5';
+    setTimeout(() => {
+      el.style.opacity = '0';
+      setTimeout(() => {
+        if (el.parentNode) el.parentNode.removeChild(el);
+        const idx = queueItems.indexOf(el);
+        if (idx > -1) queueItems.splice(idx, 1);
+        // reposition remaining
+        queueItems.forEach((q, i) => { q.style.left = (24 + i * 44) + 'px'; });
+      }, 300);
+    }, 400);
+  }, processDelay);
+}
+
+function clearQueue() {
+  const scene = document.getElementById('queueScene');
+  queueItems.forEach(el => { if (el.parentNode) el.parentNode.removeChild(el); });
+  queueItems = [];
+}
+
+// ── FADE-IN ON SCROLL ──
+const fadeObserver = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.style.animationPlayState = 'running';
+      fadeObserver.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.1 });
+document.querySelectorAll('section').forEach(s => {
+  s.style.animationPlayState = 'paused';
+  fadeObserver.observe(s);
+});
+</script>
+
+</body>
+</html>

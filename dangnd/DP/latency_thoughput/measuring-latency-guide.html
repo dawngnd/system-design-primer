@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Measuring Latency — A Practical Guide to Percentiles &amp; Distributions</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0c0e14;--bg2:#12151f;--bg3:#1a1e2c;
+  --fg:#c8ccd8;--fg2:#8a8fa0;--accent:#7ba4ff;--green:#4fd1a5;
+  --warn:#f0a050;--danger:#f06060;--purple:#b48eff;--pink:#f78fb3;
+  --card:#151929;--border:#252a3a;
+  --radius:12px;
+}
+html{scroll-behavior:smooth;font-size:16px}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--fg);line-height:1.72;overflow-x:hidden}
+a{color:var(--accent);text-decoration:none}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(12,14,20,.93);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);padding:0 1.5rem}
+nav ul{display:flex;gap:1.2rem;list-style:none;max-width:1100px;margin:auto;overflow-x:auto}
+nav li a{display:block;padding:.8rem .2rem;font-size:.8rem;color:var(--fg2);border-bottom:2px solid transparent;transition:.25s;white-space:nowrap}
+nav li a:hover,nav li a.active{color:var(--accent);border-color:var(--accent);text-decoration:none}
+
+/* LAYOUT */
+main{max-width:920px;margin:0 auto;padding:4.5rem 1.5rem 3rem}
+section{margin-bottom:4rem;animation:fadeUp .55s both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+h1{font-size:2.4rem;font-weight:800;color:#fff;letter-spacing:-.02em}
+h2{font-size:1.5rem;font-weight:700;color:#fff;margin:2.2rem 0 .8rem;padding-bottom:.4rem;border-bottom:2px solid var(--border)}
+h3{font-size:1.1rem;font-weight:600;color:var(--accent);margin:1.6rem 0 .5rem}
+p{margin-bottom:.9rem}
+.sub{font-size:1.1rem;color:var(--fg2);margin-bottom:2rem}
+ul,ol{padding-left:1.3rem;margin-bottom:1rem;color:var(--fg2)}
+li{margin-bottom:.3rem}
+strong{color:#dde}
+
+/* CARD */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1.4rem;margin:1rem 0;box-shadow:0 4px 20px rgba(0,0,0,.3);transition:transform .18s}
+.card:hover{transform:translateY(-2px)}
+
+/* FORMULA */
+.formula{background:linear-gradient(135deg,#161d38,#1b2344);border-left:4px solid var(--accent);border-radius:var(--radius);padding:1.3rem 1.8rem;margin:1.2rem 0;text-align:center;font-size:1.4rem;font-weight:700;color:#fff}
+.formula small{display:block;font-size:.8rem;color:var(--fg2);font-weight:400;margin-top:.4rem}
+
+/* TABLE */
+table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.88rem}
+th{background:var(--bg3);color:var(--accent);text-align:left;padding:.65rem .9rem;font-weight:600}
+td{padding:.55rem .9rem;border-bottom:1px solid var(--border)}
+tr:hover td{background:rgba(123,164,255,.04)}
+
+/* BOXES */
+.note,.tip,.warn-box{border-radius:var(--radius);padding:.9rem 1.1rem;margin:1rem 0;font-size:.88rem}
+.note{background:rgba(123,164,255,.07);border-left:4px solid var(--accent)}
+.tip{background:rgba(79,209,165,.07);border-left:4px solid var(--green)}
+.warn-box{background:rgba(240,96,96,.07);border-left:4px solid var(--danger)}
+
+/* TAG */
+.tag{display:inline-block;padding:.12rem .55rem;border-radius:20px;font-size:.72rem;font-weight:600;margin-right:.25rem}
+.tag-blue{background:rgba(123,164,255,.14);color:var(--accent)}
+.tag-green{background:rgba(79,209,165,.14);color:var(--green)}
+.tag-orange{background:rgba(240,160,80,.14);color:var(--warn)}
+.tag-red{background:rgba(240,96,96,.14);color:var(--danger)}
+
+/* DIAGRAM */
+.dia{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1.2rem;margin:1.2rem 0;overflow-x:auto}
+.dia svg{display:block;margin:0 auto;max-width:100%;height:auto}
+
+/* GRID */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1rem 0}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin:1rem 0}
+@media(max-width:680px){.g2,.g3{grid-template-columns:1fr}}
+
+/* HISTOGRAM */
+.histo{display:flex;align-items:flex-end;gap:2px;height:180px;padding:0;margin:1rem 0}
+.histo-bar{flex:1;border-radius:3px 3px 0 0;min-width:4px;transition:height .4s;position:relative;cursor:crosshair}
+.histo-bar:hover::after{content:attr(data-tip);position:absolute;top:-28px;left:50%;transform:translateX(-50%);background:var(--bg);color:#fff;font-size:.68rem;padding:2px 7px;border-radius:4px;white-space:nowrap;border:1px solid var(--border);z-index:5}
+
+/* PERCENTILE LINES */
+.pline{position:absolute;bottom:0;width:2px;z-index:3;pointer-events:none}
+.pline::after{position:absolute;top:-20px;left:4px;font-size:.65rem;font-weight:700;white-space:nowrap}
+
+/* INTERACTIVE */
+button{padding:.45rem 1.2rem;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:.85rem;transition:.15s}
+button:hover{filter:brightness(1.15)}
+.btn-accent{background:var(--accent);color:#fff}
+.btn-green{background:var(--green);color:#111}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--fg)}
+input[type=range]{-webkit-appearance:none;width:100%;height:6px;border-radius:3px;background:var(--bg3);outline:none;margin:.5rem 0}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--bg)}
+
+/* DETAILS */
+details{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);margin:.7rem 0}
+details summary{padding:.8rem 1rem;cursor:pointer;font-weight:600;color:#fff;list-style:none;display:flex;align-items:center;gap:.4rem}
+details summary::before{content:'▸';transition:transform .2s;color:var(--accent)}
+details[open] summary::before{transform:rotate(90deg)}
+details .inner{padding:0 1rem 1rem}
+
+/* TIMELINE */
+.timeline{position:relative;padding-left:2rem;margin:1rem 0}
+.timeline::before{content:'';position:absolute;left:.6rem;top:0;bottom:0;width:2px;background:var(--border)}
+.tl-item{position:relative;margin-bottom:1.5rem}
+.tl-item::before{content:'';position:absolute;left:-1.65rem;top:.35rem;width:12px;height:12px;border-radius:50%;border:2px solid var(--accent);background:var(--bg)}
+.tl-item.danger::before{border-color:var(--danger)}
+.tl-item.warn::before{border-color:var(--warn)}
+.tl-item.ok::before{border-color:var(--green)}
+
+footer{text-align:center;padding:2rem;color:var(--fg2);font-size:.78rem;border-top:1px solid var(--border)}
+</style>
+</head>
+<body>
+
+<nav>
+<ul>
+  <li><a href="#s1">Why Percentiles</a></li>
+  <li><a href="#s2">Distributions</a></li>
+  <li><a href="#s3">P50 P95 P99</a></li>
+  <li><a href="#s4">Simulator</a></li>
+  <li><a href="#s5">Fan-out</a></li>
+  <li><a href="#s6">Alerting</a></li>
+  <li><a href="#s7">Pitfalls</a></li>
+  <li><a href="#s8">Implementation</a></li>
+</ul>
+</nav>
+
+<main>
+
+<!-- ═══ HERO ═══ -->
+<section id="s1">
+<h1>Measuring Latency</h1>
+<p class="sub">A practical guide to percentiles, distributions, and why averages lie.</p>
+
+<h2>1 — The Problem With Averages</h2>
+
+<p>An average hides the detail. It takes all values and puts them into one number. You cannot see the shape of the data.</p>
+
+<div class="g2">
+  <div class="card">
+    <h3 style="color:var(--green)">Service A — Stable</h3>
+    <p style="font-family:monospace;font-size:.82rem;color:var(--fg2)">48 49 50 50 51 51 52 52 53 54</p>
+    <table>
+      <tr><td>Average</td><td><strong>51 ms</strong></td></tr>
+      <tr><td>P95</td><td><strong>54 ms</strong></td></tr>
+      <tr><td>Spread</td><td>48 – 54 ms (narrow)</td></tr>
+    </table>
+    <p style="color:var(--green);font-weight:600;margin-top:.5rem">✅ All users have a good experience.</p>
+  </div>
+  <div class="card">
+    <h3 style="color:var(--danger)">Service B — Long tail</h3>
+    <p style="font-family:monospace;font-size:.82rem;color:var(--fg2)">10 11 11 12 12 12 13 14 15 390</p>
+    <table>
+      <tr><td>Average</td><td><strong>50 ms</strong></td></tr>
+      <tr><td>P95</td><td><strong>390 ms</strong></td></tr>
+      <tr><td>Spread</td><td>10 – 390 ms (wide!)</td></tr>
+    </table>
+    <p style="color:var(--danger);font-weight:600;margin-top:.5rem">❌ 1 in 10 users waits 390ms. Average hides this.</p>
+  </div>
+</div>
+
+<div class="warn-box">
+  <strong>⚠ Key insight:</strong> Both services show an average of ~50ms. But the user experience is completely different. The average gives the same score to a healthy system and a sick system.
+</div>
+
+<div class="dia">
+  <svg viewBox="0 0 720 100" xmlns="http://www.w3.org/2000/svg">
+    <text x="360" y="18" text-anchor="middle" fill="var(--fg2)" font-size="11" font-weight="600">Analogy: "Average temperature of your body is 37°C"</text>
+    <!-- Body -->
+    <rect x="100" y="35" width="180" height="50" rx="8" fill="rgba(79,209,165,.1)" stroke="var(--green)" stroke-width="1.2"/>
+    <text x="190" y="55" text-anchor="middle" fill="var(--green)" font-size="10" font-weight="600">Hands: 35°C</text>
+    <text x="190" y="72" text-anchor="middle" fill="var(--green)" font-size="10">Normal</text>
+    <rect x="310" y="35" width="180" height="50" rx="8" fill="rgba(240,96,96,.1)" stroke="var(--danger)" stroke-width="1.2"/>
+    <text x="400" y="55" text-anchor="middle" fill="var(--danger)" font-size="10" font-weight="600">Forehead: 40°C</text>
+    <text x="400" y="72" text-anchor="middle" fill="var(--danger)" font-size="10">Fever!</text>
+    <text x="565" y="55" text-anchor="middle" fill="var(--warn)" font-size="11" font-weight="700">Avg = 37°C</text>
+    <text x="565" y="72" text-anchor="middle" fill="var(--warn)" font-size="10">"Looks fine"</text>
+    <text x="565" y="88" text-anchor="middle" fill="var(--fg2)" font-size="9">…but you have a fever</text>
+  </svg>
+</div>
+</section>
+
+<!-- ═══ DISTRIBUTIONS ═══ -->
+<section id="s2">
+<h2>2 — Latency Distributions</h2>
+
+<p>In queueing theory, the M/M/1 model uses an <strong>exponential distribution</strong> for service times. In the real world, latency usually follows a <strong>log-normal</strong> or <strong>multi-modal</strong> distribution — most requests are fast, but a long tail of slow requests exists.</p>
+
+<h3>2.1 — Normal vs Long-Tail Distribution</h3>
+
+<div class="g2">
+  <div class="card">
+    <p style="font-weight:600;color:#fff;margin-bottom:.5rem">Normal (Gaussian)</p>
+    <div class="histo" id="histoNormal"></div>
+    <p style="font-size:.8rem;color:var(--fg2)">Symmetric. Average ≈ median. Few outliers. Rare in latency data.</p>
+  </div>
+  <div class="card">
+    <p style="font-weight:600;color:#fff;margin-bottom:.5rem">Long-Tail (Log-normal)</p>
+    <div class="histo" id="histoLongTail"></div>
+    <p style="font-size:.8rem;color:var(--fg2)">Skewed right. Average > median. Many outliers. <strong>Common in real latency data.</strong></p>
+  </div>
+</div>
+
+<h3>2.2 — Why Does the Long Tail Exist?</h3>
+<div class="card">
+  <table>
+    <tr><th>Cause</th><th>Effect on Latency</th><th>Frequency</th></tr>
+    <tr><td>Garbage Collection (GC pause)</td><td>+50ms to +500ms spike</td><td>Every ~100–1000 requests</td></tr>
+    <tr><td>Cache miss → database query</td><td>+10ms to +200ms</td><td>1–10% of requests</td></tr>
+    <tr><td>TCP retransmission</td><td>+200ms to +3000ms</td><td>0.1–1% of packets</td></tr>
+    <tr><td>Context switch / CPU throttle</td><td>+5ms to +50ms</td><td>Under high load</td></tr>
+    <tr><td>Lock contention</td><td>+10ms to +500ms</td><td>Under concurrency</td></tr>
+    <tr><td>Cold start (serverless/container)</td><td>+500ms to +5000ms</td><td>First request after idle</td></tr>
+    <tr><td>Cross-region call</td><td>+60ms to +200ms</td><td>If routing changes</td></tr>
+  </table>
+</div>
+
+<div class="tip">
+  <strong>💡 Connection to M/M/1:</strong> The exponential service time in M/M/1 already produces a long tail — the probability of a very long service time is small but never zero. Real systems are <em>worse</em> because multiple causes (GC, cache miss, retransmit) stack on top of each other.
+</div>
+</section>
+
+<!-- ═══ PERCENTILES ═══ -->
+<section id="s3">
+<h2>3 — Percentiles: P50, P95, P99</h2>
+
+<h3>3.1 — What is a Percentile?</h3>
+<p>Sort all latency values from lowest to highest. The P<em>N</em> value is the point where <em>N</em>% of requests are faster.</p>
+
+<div class="dia">
+  <svg viewBox="0 0 750 200" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="ar" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="var(--fg2)"/></marker></defs>
+
+    <!-- Axis -->
+    <line x1="40" y1="130" x2="710" y2="130" stroke="var(--fg2)" stroke-width="1.5" marker-end="url(#ar)"/>
+    <text x="375" y="158" text-anchor="middle" fill="var(--fg2)" font-size="10">Latency (ms) — sorted low → high</text>
+
+    <!-- Blocks representing sorted requests -->
+    <g id="sortedBlocks"></g>
+
+    <!-- P50 -->
+    <line x1="375" y1="40" x2="375" y2="130" stroke="var(--accent)" stroke-width="2" stroke-dasharray="4 3"/>
+    <rect x="345" y="25" width="60" height="20" rx="4" fill="var(--accent)"/>
+    <text x="375" y="39" text-anchor="middle" fill="#fff" font-size="10" font-weight="700">P50</text>
+    <text x="375" y="17" text-anchor="middle" fill="var(--accent)" font-size="9">50% faster</text>
+
+    <!-- P95 -->
+    <line x1="600" y1="40" x2="600" y2="130" stroke="var(--warn)" stroke-width="2" stroke-dasharray="4 3"/>
+    <rect x="570" y="25" width="60" height="20" rx="4" fill="var(--warn)"/>
+    <text x="600" y="39" text-anchor="middle" fill="#fff" font-size="10" font-weight="700">P95</text>
+    <text x="600" y="17" text-anchor="middle" fill="var(--warn)" font-size="9">95% faster</text>
+
+    <!-- P99 -->
+    <line x1="670" y1="40" x2="670" y2="130" stroke="var(--danger)" stroke-width="2" stroke-dasharray="4 3"/>
+    <rect x="640" y="25" width="60" height="20" rx="4" fill="var(--danger)"/>
+    <text x="670" y="39" text-anchor="middle" fill="#fff" font-size="10" font-weight="700">P99</text>
+    <text x="670" y="17" text-anchor="middle" fill="var(--danger)" font-size="9">99% faster</text>
+
+    <!-- Request dots -->
+    <g fill="var(--green)" opacity=".7">
+      <circle cx="60" cy="105" r="3"/><circle cx="72" cy="105" r="3"/><circle cx="84" cy="105" r="3"/>
+      <circle cx="96" cy="105" r="3"/><circle cx="108" cy="105" r="3"/><circle cx="120" cy="105" r="3"/>
+      <circle cx="132" cy="105" r="3"/><circle cx="144" cy="105" r="3"/><circle cx="156" cy="105" r="3"/>
+      <circle cx="168" cy="105" r="3"/><circle cx="180" cy="105" r="3"/><circle cx="192" cy="105" r="3"/>
+      <circle cx="204" cy="105" r="3"/><circle cx="216" cy="105" r="3"/><circle cx="228" cy="105" r="3"/>
+      <circle cx="240" cy="105" r="3"/><circle cx="252" cy="105" r="3"/><circle cx="264" cy="105" r="3"/>
+      <circle cx="276" cy="105" r="3"/><circle cx="288" cy="105" r="3"/><circle cx="300" cy="105" r="3"/>
+      <circle cx="312" cy="105" r="3"/><circle cx="324" cy="105" r="3"/><circle cx="336" cy="105" r="3"/>
+      <circle cx="348" cy="105" r="3"/><circle cx="360" cy="105" r="3"/><circle cx="372" cy="105" r="3"/>
+      <circle cx="384" cy="105" r="3"/><circle cx="396" cy="105" r="3"/><circle cx="408" cy="105" r="3"/>
+    </g>
+    <g fill="var(--accent)" opacity=".7">
+      <circle cx="420" cy="105" r="3"/><circle cx="432" cy="105" r="3"/><circle cx="444" cy="105" r="3"/>
+      <circle cx="456" cy="105" r="3"/><circle cx="468" cy="105" r="3"/><circle cx="480" cy="105" r="3"/>
+      <circle cx="492" cy="105" r="3"/><circle cx="504" cy="105" r="3"/><circle cx="516" cy="105" r="3"/>
+      <circle cx="528" cy="105" r="3"/><circle cx="540" cy="105" r="3"/><circle cx="552" cy="105" r="3"/>
+      <circle cx="564" cy="105" r="3"/><circle cx="576" cy="105" r="3"/><circle cx="588" cy="105" r="3"/>
+    </g>
+    <g fill="var(--warn)" opacity=".8">
+      <circle cx="610" cy="105" r="3"/><circle cx="625" cy="105" r="3"/><circle cx="640" cy="105" r="3"/>
+      <circle cx="655" cy="105" r="3"/>
+    </g>
+    <g fill="var(--danger)" opacity=".9">
+      <circle cx="685" cy="105" r="4"/><animate attributeName="opacity" values=".6;1;.6" dur="1.5s" repeatCount="indefinite"/>
+    </g>
+
+    <!-- Labels under dots -->
+    <text x="200" y="125" text-anchor="middle" fill="var(--green)" font-size="8">50% of requests</text>
+    <text x="504" y="125" text-anchor="middle" fill="var(--accent)" font-size="8">next 45%</text>
+    <text x="632" y="125" text-anchor="middle" fill="var(--warn)" font-size="8">4%</text>
+    <text x="685" y="125" text-anchor="middle" fill="var(--danger)" font-size="8">1%</text>
+
+    <!-- Brace for tail -->
+    <text x="685" y="85" text-anchor="middle" fill="var(--danger)" font-size="9" font-weight="600">← Tail</text>
+  </svg>
+</div>
+
+<h3>3.2 — What Each Percentile Tells You</h3>
+<div class="card">
+  <table>
+    <tr><th>Metric</th><th>Meaning</th><th>Monitoring Role</th><th>Who is affected</th></tr>
+    <tr>
+      <td><span class="tag tag-green">P50</span></td>
+      <td>The <strong>median</strong>. Half of requests are faster than this value.</td>
+      <td>Shows the <strong>typical</strong> user experience.</td>
+      <td>The "average" user</td>
+    </tr>
+    <tr>
+      <td><span class="tag tag-blue">P95</span></td>
+      <td>Only 5% of requests are slower.</td>
+      <td><strong>Early warning</strong> — degradation has spread to many users.</td>
+      <td>1 in 20 users</td>
+    </tr>
+    <tr>
+      <td><span class="tag tag-orange">P99</span></td>
+      <td>Only 1% of requests are slower.</td>
+      <td><strong>Smoke detector</strong> — finds problems before they spread.</td>
+      <td>1 in 100 users</td>
+    </tr>
+    <tr>
+      <td><span class="tag tag-red">P99.9</span></td>
+      <td>Only 0.1% of requests are slower.</td>
+      <td>Catches extreme outliers. Used in payment / trading systems.</td>
+      <td>1 in 1,000 users</td>
+    </tr>
+  </table>
+</div>
+
+<h3>3.3 — P95 vs P99: Different Detection Capabilities</h3>
+<div class="card">
+  <p style="font-weight:600;color:#fff;margin-bottom:.8rem">Scenario comparison — same system, different failure modes:</p>
+  <table>
+    <tr><th>Scenario</th><th>Affected %</th><th>P95 detects?</th><th>P99 detects?</th></tr>
+    <tr>
+      <td>GC pause (1 in 100 req)</td><td>1%</td>
+      <td style="color:var(--fg2)">❌ No — below 5% threshold</td>
+      <td style="color:var(--danger)">✅ Yes — exactly at 1%</td>
+    </tr>
+    <tr>
+      <td>DB pool exhaustion (10% of req)</td><td>10%</td>
+      <td style="color:var(--warn)">✅ Yes — above 5%</td>
+      <td style="color:var(--danger)">✅ Yes</td>
+    </tr>
+    <tr>
+      <td>Gradual memory leak</td><td>Grows over time</td>
+      <td style="color:var(--fg2)">⏳ Detects late (hour 4)</td>
+      <td style="color:var(--danger)">⚡ Detects early (hour 2)</td>
+    </tr>
+    <tr>
+      <td>Network partition (30%)</td><td>30%</td>
+      <td style="color:var(--warn)">✅ Yes — severe</td>
+      <td style="color:var(--danger)">✅ Yes — severe</td>
+    </tr>
+  </table>
+</div>
+
+<div class="dia">
+  <svg viewBox="0 0 720 140" xmlns="http://www.w3.org/2000/svg">
+    <text x="360" y="18" text-anchor="middle" fill="#fff" font-size="12" font-weight="700">Detection Timeline During Gradual Degradation</text>
+    <!-- Timeline -->
+    <line x1="60" y1="75" x2="660" y2="75" stroke="var(--border)" stroke-width="3" stroke-linecap="round"/>
+    <text x="60" y="105" text-anchor="middle" fill="var(--fg2)" font-size="9">Hour 1</text>
+    <text x="210" y="105" text-anchor="middle" fill="var(--fg2)" font-size="9">Hour 2</text>
+    <text x="360" y="105" text-anchor="middle" fill="var(--fg2)" font-size="9">Hour 3</text>
+    <text x="510" y="105" text-anchor="middle" fill="var(--fg2)" font-size="9">Hour 4</text>
+    <text x="660" y="105" text-anchor="middle" fill="var(--fg2)" font-size="9">Hour 5</text>
+
+    <!-- Normal zone -->
+    <rect x="60" y="65" width="150" height="20" rx="4" fill="rgba(79,209,165,.2)"/>
+
+    <!-- P99 detects -->
+    <circle cx="210" cy="75" r="10" fill="var(--danger)" opacity=".9">
+      <animate attributeName="r" values="8;12;8" dur="1.5s" repeatCount="indefinite"/>
+    </circle>
+    <text x="210" y="55" text-anchor="middle" fill="var(--danger)" font-size="9" font-weight="700">P99 alerts ⚡</text>
+
+    <!-- Growing -->
+    <rect x="210" y="65" width="300" height="20" rx="4" fill="rgba(240,160,80,.15)"/>
+
+    <!-- P95 detects -->
+    <circle cx="510" cy="75" r="10" fill="var(--warn)" opacity=".9">
+      <animate attributeName="r" values="8;12;8" dur="1.5s" repeatCount="indefinite"/>
+    </circle>
+    <text x="510" y="55" text-anchor="middle" fill="var(--warn)" font-size="9" font-weight="700">P95 alerts 🔔</text>
+
+    <!-- Crisis -->
+    <rect x="510" y="65" width="150" height="20" rx="4" fill="rgba(240,96,96,.2)"/>
+
+    <!-- Gap label -->
+    <text x="360" y="132" text-anchor="middle" fill="var(--accent)" font-size="10" font-weight="600">← P99 gives you 2 hours earlier warning →</text>
+  </svg>
+</div>
+</section>
+
+<!-- ═══ SIMULATOR ═══ -->
+<section id="s4">
+<h2>4 — Interactive Latency Simulator</h2>
+<p>Click <strong>"Generate"</strong> to create sample latency data. The histogram and percentiles update in real time. Use the slider to add outliers and observe how each metric changes.</p>
+
+<div class="card" style="padding:1.5rem">
+  <div class="g3">
+    <div>
+      <label style="font-size:.82rem;color:var(--fg2)">Base latency (ms)</label>
+      <input type="range" id="simBase" min="5" max="100" value="20" oninput="updateSim()">
+      <span id="simBaseVal" style="font-size:.82rem;color:var(--accent)">20 ms</span>
+    </div>
+    <div>
+      <label style="font-size:.82rem;color:var(--fg2)">Outlier probability (%)</label>
+      <input type="range" id="simOutlier" min="0" max="20" value="3" oninput="updateSim()">
+      <span id="simOutlierVal" style="font-size:.82rem;color:var(--warn)">3%</span>
+    </div>
+    <div>
+      <label style="font-size:.82rem;color:var(--fg2)">Outlier magnitude (×)</label>
+      <input type="range" id="simMag" min="2" max="30" value="10" oninput="updateSim()">
+      <span id="simMagVal" style="font-size:.82rem;color:var(--danger)">10×</span>
+    </div>
+  </div>
+
+  <div style="text-align:center;margin:.8rem 0">
+    <button class="btn-accent" onclick="generateSim()">▶ Generate 1000 Requests</button>
+    <span style="margin-left:1rem;font-size:.82rem;color:var(--fg2)" id="simCount">No data yet</span>
+  </div>
+
+  <div class="histo" id="simHisto" style="height:160px"></div>
+
+  <div class="g2" style="margin-top:1rem">
+    <div>
+      <table id="simStats">
+        <tr><th>Metric</th><th>Value</th></tr>
+        <tr><td>Average</td><td id="simAvg">—</td></tr>
+        <tr><td><span class="tag tag-green">P50</span></td><td id="simP50">—</td></tr>
+        <tr><td><span class="tag tag-blue">P90</span></td><td id="simP90">—</td></tr>
+        <tr><td><span class="tag tag-blue">P95</span></td><td id="simP95">—</td></tr>
+        <tr><td><span class="tag tag-orange">P99</span></td><td id="simP99">—</td></tr>
+        <tr><td><span class="tag tag-red">Max</span></td><td id="simMax">—</td></tr>
+      </table>
+    </div>
+    <div>
+      <div class="note" id="simInsight" style="min-height:120px">
+        Generate data to see the analysis here.
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ═══ FAN-OUT ═══ -->
+<section id="s5">
+<h2>5 — The Fan-out Amplification Problem</h2>
+<p>Modern systems call many services to build one response. The total latency is the <strong>slowest</strong> of all calls. This makes tail latency much worse.</p>
+
+<div class="formula">
+  P(all fast) = 0.99<sup>N</sup>
+  <small>N = number of service calls in the critical path</small>
+</div>
+
+<div class="card">
+  <table>
+    <tr><th>Services (N)</th><th>P(all under P99)</th><th>% requests hitting ≥1 slow call</th><th>Impact at 1M req/day</th></tr>
+    <tr><td>1</td><td>99.0%</td><td><strong>1.0%</strong></td><td>10,000 slow</td></tr>
+    <tr><td>3</td><td>97.0%</td><td><strong>3.0%</strong></td><td>30,000 slow</td></tr>
+    <tr><td>5</td><td>95.1%</td><td><strong>4.9%</strong></td><td>49,000 slow</td></tr>
+    <tr><td>10</td><td>90.4%</td><td><strong>9.6%</strong></td><td>96,000 slow</td></tr>
+    <tr><td>20</td><td>81.8%</td><td><strong>18.2%</strong></td><td>182,000 slow</td></tr>
+    <tr><td>50</td><td>60.5%</td><td><strong>39.5%</strong></td><td>395,000 slow</td></tr>
+  </table>
+</div>
+
+<div class="dia">
+  <svg viewBox="0 0 720 240" xmlns="http://www.w3.org/2000/svg">
+    <text x="360" y="20" text-anchor="middle" fill="#fff" font-size="12" font-weight="700">Fan-out: One User Request → Multiple Service Calls</text>
+
+    <!-- User -->
+    <rect x="10" y="90" width="80" height="45" rx="10" fill="var(--bg3)" stroke="var(--accent)" stroke-width="1.5"/>
+    <text x="50" y="117" text-anchor="middle" fill="var(--accent)" font-size="10" font-weight="600">User</text>
+
+    <!-- API Gateway -->
+    <rect x="130" y="90" width="100" height="45" rx="10" fill="var(--bg3)" stroke="var(--green)" stroke-width="1.5"/>
+    <text x="180" y="117" text-anchor="middle" fill="var(--green)" font-size="10" font-weight="600">Gateway</text>
+
+    <line x1="92" y1="112" x2="128" y2="112" stroke="var(--fg2)" stroke-width="1" marker-end="url(#ar)"/>
+
+    <!-- Fan-out lines -->
+    <line x1="232" y1="100" x2="290" y2="55" stroke="var(--fg2)" stroke-width="1" marker-end="url(#ar)"/>
+    <line x1="232" y1="112" x2="290" y2="112" stroke="var(--fg2)" stroke-width="1" marker-end="url(#ar)"/>
+    <line x1="232" y1="125" x2="290" y2="170" stroke="var(--fg2)" stroke-width="1" marker-end="url(#ar)"/>
+
+    <!-- Services -->
+    <rect x="295" y="35" width="130" height="40" rx="8" fill="var(--bg3)" stroke="var(--green)" stroke-width="1"/>
+    <text x="360" y="58" text-anchor="middle" fill="var(--green)" font-size="9" font-weight="600">Auth Service (12ms)</text>
+
+    <rect x="295" y="92" width="130" height="40" rx="8" fill="var(--bg3)" stroke="var(--green)" stroke-width="1"/>
+    <text x="360" y="115" text-anchor="middle" fill="var(--green)" font-size="9" font-weight="600">Product Svc (18ms)</text>
+
+    <!-- Slow service -->
+    <rect x="295" y="150" width="130" height="40" rx="8" fill="rgba(240,96,96,.12)" stroke="var(--danger)" stroke-width="2">
+      <animate attributeName="stroke-opacity" values="1;.4;1" dur="1.5s" repeatCount="indefinite"/>
+    </rect>
+    <text x="360" y="173" text-anchor="middle" fill="var(--danger)" font-size="9" font-weight="700">Price Svc (340ms!) ⚠</text>
+
+    <!-- Response -->
+    <line x1="427" y1="55" x2="490" y2="112" stroke="var(--fg2)" stroke-width="1"/>
+    <line x1="427" y1="112" x2="490" y2="112" stroke="var(--fg2)" stroke-width="1"/>
+    <line x1="427" y1="170" x2="490" y2="112" stroke="var(--danger)" stroke-width="1.5"/>
+
+    <rect x="495" y="90" width="120" height="45" rx="10" fill="var(--bg3)" stroke="var(--warn)" stroke-width="1.5"/>
+    <text x="555" y="110" text-anchor="middle" fill="var(--warn)" font-size="9" font-weight="700">wait for slowest</text>
+    <text x="555" y="125" text-anchor="middle" fill="var(--danger)" font-size="10" font-weight="700">= 340ms</text>
+
+    <line x1="617" y1="112" x2="660" y2="112" stroke="var(--fg2)" stroke-width="1" marker-end="url(#ar)"/>
+
+    <rect x="665" y="95" width="45" height="35" rx="8" fill="var(--bg3)" stroke="var(--fg2)" stroke-width="1"/>
+    <text x="688" y="117" text-anchor="middle" fill="var(--fg2)" font-size="9">User</text>
+    <text x="688" y="220" text-anchor="middle" fill="var(--danger)" font-size="10" font-weight="600">Total = 340ms 😞</text>
+  </svg>
+</div>
+
+<div class="tip">
+  <strong>💡 Lesson:</strong> With fan-out, the P99 of the <em>whole system</em> is much worse than the P99 of any single service. This is why large-scale systems (Google, Amazon) focus heavily on tail latency.
+</div>
+</section>
+
+<!-- ═══ ALERTING ═══ -->
+<section id="s6">
+<h2>6 — Alerting Strategy</h2>
+
+<div class="dia">
+  <svg viewBox="0 0 720 220" xmlns="http://www.w3.org/2000/svg">
+    <text x="360" y="22" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">Three-Level Alert System</text>
+
+    <!-- Level 1 -->
+    <rect x="30" y="45" width="200" height="80" rx="12" fill="rgba(240,96,96,.08)" stroke="var(--danger)" stroke-width="1.5"/>
+    <text x="130" y="70" text-anchor="middle" fill="var(--danger)" font-size="11" font-weight="700">P99 > threshold</text>
+    <text x="130" y="90" text-anchor="middle" fill="var(--fg2)" font-size="9">⚠ Warning</text>
+    <text x="130" y="108" text-anchor="middle" fill="var(--fg2)" font-size="9">"Investigate — possible issue"</text>
+
+    <!-- Level 2 -->
+    <rect x="260" y="45" width="200" height="80" rx="12" fill="rgba(240,160,80,.08)" stroke="var(--warn)" stroke-width="1.5"/>
+    <text x="360" y="70" text-anchor="middle" fill="var(--warn)" font-size="11" font-weight="700">P95 > threshold</text>
+    <text x="360" y="90" text-anchor="middle" fill="var(--fg2)" font-size="9">🚨 Critical</text>
+    <text x="360" y="108" text-anchor="middle" fill="var(--fg2)" font-size="9">"Act now — 5% users affected"</text>
+
+    <!-- Level 3 -->
+    <rect x="490" y="45" width="200" height="80" rx="12" fill="rgba(240,96,96,.15)" stroke="var(--danger)" stroke-width="2"/>
+    <text x="590" y="68" text-anchor="middle" fill="var(--danger)" font-size="11" font-weight="700">P95 AND P99</text>
+    <text x="590" y="84" text-anchor="middle" fill="var(--danger)" font-size="11" font-weight="700">both rising</text>
+    <text x="590" y="104" text-anchor="middle" fill="var(--fg2)" font-size="9">🔥 Incident</text>
+    <text x="590" y="118" text-anchor="middle" fill="var(--fg2)" font-size="9">"Escalate immediately"</text>
+
+    <!-- Arrows -->
+    <line x1="232" y1="85" x2="258" y2="85" stroke="var(--fg2)" stroke-width="1.5" marker-end="url(#ar)"/>
+    <line x1="462" y1="85" x2="488" y2="85" stroke="var(--fg2)" stroke-width="1.5" marker-end="url(#ar)"/>
+
+    <!-- Severity bar -->
+    <rect x="30" y="155" width="660" height="24" rx="12" fill="linear-gradient(90deg,rgba(79,209,165,.2),rgba(240,160,80,.2),rgba(240,96,96,.3))"/>
+    <text x="120" y="171" text-anchor="middle" fill="var(--green)" font-size="9" font-weight="600">Low severity</text>
+    <text x="590" y="171" text-anchor="middle" fill="var(--danger)" font-size="9" font-weight="600">High severity</text>
+    <text x="360" y="205" text-anchor="middle" fill="var(--fg2)" font-size="10">P99 = smoke detector (early) &nbsp;&nbsp;|&nbsp;&nbsp; P95 = fire alarm (confirmed)</text>
+  </svg>
+</div>
+
+<div class="card">
+  <h3>Recommended Thresholds (example for web API)</h3>
+  <table>
+    <tr><th>Metric</th><th>Target (SLO)</th><th>Warning</th><th>Critical</th></tr>
+    <tr><td><span class="tag tag-green">P50</span></td><td>< 50ms</td><td>> 80ms</td><td>> 150ms</td></tr>
+    <tr><td><span class="tag tag-blue">P95</span></td><td>< 200ms</td><td>> 350ms</td><td>> 500ms</td></tr>
+    <tr><td><span class="tag tag-orange">P99</span></td><td>< 500ms</td><td>> 800ms</td><td>> 1500ms</td></tr>
+  </table>
+</div>
+</section>
+
+<!-- ═══ PITFALLS ═══ -->
+<section id="s7">
+<h2>7 — Common Measurement Pitfalls</h2>
+
+<details>
+  <summary>❌ Pitfall 1: Averaging percentiles across instances</summary>
+  <div class="inner">
+    <p>You have 3 servers. Each reports P99 = 80ms, 120ms, 300ms. The <strong>average of these three P99 values is 167ms</strong>. But this is wrong!</p>
+    <p>You must <strong>merge all raw data first</strong>, then calculate one P99 from the combined set. The correct P99 of the combined data could be much higher than 167ms.</p>
+    <div class="warn-box"><strong>Rule:</strong> Never average percentiles. Merge first, then calculate.</div>
+  </div>
+</details>
+
+<details>
+  <summary>❌ Pitfall 2: Coordinated omission</summary>
+  <div class="inner">
+    <p>Most load test tools send the next request only <em>after</em> the previous one completes. When the server is slow, the tool sends fewer requests. The slow period is <strong>underrepresented</strong> in the data.</p>
+    <p>Result: The measured P99 looks better than reality.</p>
+    <div class="tip"><strong>Fix:</strong> Use tools that send requests at a fixed rate regardless of responses — for example, <code>wrk2</code> or <code>Gatling</code> with open-model.</div>
+  </div>
+</details>
+
+<details>
+  <summary>❌ Pitfall 3: Too few samples</summary>
+  <div class="inner">
+    <p>To get a meaningful P99, you need at least <strong>1,000 samples</strong> (so the "1%" is at least 10 data points). For P99.9, you need 10,000+ samples.</p>
+    <table>
+      <tr><th>Percentile</th><th>Min samples for 1 data point in tail</th><th>Recommended samples</th></tr>
+      <tr><td>P95</td><td>20</td><td>500+</td></tr>
+      <tr><td>P99</td><td>100</td><td>1,000+</td></tr>
+      <tr><td>P99.9</td><td>1,000</td><td>10,000+</td></tr>
+    </table>
+  </div>
+</details>
+
+<details>
+  <summary>❌ Pitfall 4: Client-side vs server-side measurement</summary>
+  <div class="inner">
+    <p>Server-side latency does not include network time or client queue time. Always measure from the <strong>client perspective</strong> when possible.</p>
+    <div class="dia">
+      <svg viewBox="0 0 600 80" xmlns="http://www.w3.org/2000/svg">
+        <rect x="10" y="20" width="580" height="20" rx="4" fill="rgba(123,164,255,.1)" stroke="var(--accent)" stroke-width="1"/>
+        <text x="300" y="14" text-anchor="middle" fill="var(--accent)" font-size="9" font-weight="600">Client-measured latency (includes everything)</text>
+
+        <rect x="120" y="50" width="360" height="20" rx="4" fill="rgba(79,209,165,.1)" stroke="var(--green)" stroke-width="1"/>
+        <text x="300" y="46" text-anchor="middle" fill="var(--green)" font-size="9" font-weight="600">Server-measured latency (processing only)</text>
+
+        <text x="60" y="35" text-anchor="middle" fill="var(--fg2)" font-size="8">Network →</text>
+        <text x="540" y="35" text-anchor="middle" fill="var(--fg2)" font-size="8">← Network</text>
+      </svg>
+    </div>
+  </div>
+</details>
+</section>
+
+<!-- ═══ IMPLEMENTATION ═══ -->
+<section id="s8">
+<h2>8 — Implementation Guide</h2>
+
+<h3>Data Structures for Percentile Calculation</h3>
+<div class="card">
+  <table>
+    <tr><th>Method</th><th>Accuracy</th><th>Memory</th><th>Best For</th></tr>
+    <tr><td><strong>Sorted array</strong></td><td>Exact</td><td>O(n) — high</td><td>Small datasets, offline analysis</td></tr>
+    <tr><td><strong>t-digest</strong></td><td>~0.1% error at tails</td><td>O(1) — fixed</td><td>Streaming, distributed systems ★</td></tr>
+    <tr><td><strong>HDR Histogram</strong></td><td>Configurable precision</td><td>O(1) — fixed</td><td>Low-latency apps, JVM ★</td></tr>
+    <tr><td><strong>DDSketch</strong></td><td>Relative error guarantee</td><td>O(1) — fixed</td><td>Datadog, monitoring platforms</td></tr>
+  </table>
+</div>
+
+<h3>Tools & Platforms</h3>
+<div class="g2">
+  <div class="card">
+    <h3 style="color:var(--green)">Metrics Collection</h3>
+    <ul>
+      <li><strong>Prometheus</strong> — histogram_quantile()</li>
+      <li><strong>Datadog</strong> — distribution metrics</li>
+      <li><strong>OpenTelemetry</strong> — histogram instrument</li>
+      <li><strong>StatsD</strong> — timer type</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3 style="color:var(--accent)">Load Testing</h3>
+    <ul>
+      <li><strong>wrk2</strong> — constant-rate, avoids coordinated omission</li>
+      <li><strong>Gatling</strong> — open model</li>
+      <li><strong>k6</strong> — trend metric with percentiles</li>
+      <li><strong>Locust</strong> — Python-based</li>
+    </ul>
+  </div>
+</div>
+
+<div class="tip">
+  <strong>💡 Summary:</strong> Measure P50 for typical experience. Alert on P95 for widespread problems. Alert on P99 for early detection. Never average percentiles. Always measure from the client side. Use streaming data structures (t-digest or HDR Histogram) for production monitoring.
+</div>
+</section>
+
+</main>
+
+<footer>
+  Measuring Latency — Percentiles &amp; Distributions Guide &mdash; ASD-STE100 &mdash; 2026
+</footer>
+
+<script>
+// ── NAV ──
+const secs=document.querySelectorAll('section'),nls=document.querySelectorAll('nav a');
+const obs=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){nls.forEach(l=>l.classList.remove('active'));const l=document.querySelector(`nav a[href="#${e.target.id}"]`);if(l)l.classList.add('active')}})},{rootMargin:'-35% 0px -60% 0px'});
+secs.forEach(s=>obs.observe(s));
+
+// ── STATIC HISTOGRAMS ──
+function drawHisto(id,data,color){
+  const el=document.getElementById(id);
+  const mx=Math.max(...data);
+  data.forEach((v,i)=>{
+    const b=document.createElement('div');
+    b.className='histo-bar';
+    b.style.height=((v/mx)*100)+'%';
+    b.style.background=color;
+    b.setAttribute('data-tip',`${v}`);
+    el.appendChild(b);
+  });
+}
+// Normal-ish
+const norm=[];for(let i=0;i<40;i++){const x=(i-20)/6;norm.push(Math.round(100*Math.exp(-x*x/2)))}
+drawHisto('histoNormal',norm,'var(--accent)');
+// Long tail
+const lt=[];for(let i=0;i<40;i++){lt.push(i<6?Math.round(20+i*30):Math.round(180*Math.exp(-(i-6)/5))+2)}
+drawHisto('histoLongTail',lt,'var(--warn)');
+
+// ── SIMULATOR ──
+let simData=[];
+function updateSim(){
+  document.getElementById('simBaseVal').textContent=document.getElementById('simBase').value+' ms';
+  document.getElementById('simOutlierVal').textContent=document.getElementById('simOutlier').value+'%';
+  document.getElementById('simMagVal').textContent=document.getElementById('simMag').value+'×';
+}
+function generateSim(){
+  const base=+document.getElementById('simBase').value;
+  const outlierP=+document.getElementById('simOutlier').value/100;
+  const mag=+document.getElementById('simMag').value;
+  const N=1000;
+  simData=[];
+  for(let i=0;i<N;i++){
+    if(Math.random()<outlierP){
+      simData.push(Math.round(base*mag*(0.5+Math.random())));
+    } else {
+      // log-normal around base
+      const ln=base*Math.exp((Math.random()+Math.random()+Math.random()-1.5)*0.4);
+      simData.push(Math.max(1,Math.round(ln)));
+    }
+  }
+  simData.sort((a,b)=>a-b);
+  renderSimHisto();
+  renderSimStats();
+}
+function renderSimHisto(){
+  const el=document.getElementById('simHisto');
+  el.innerHTML='';
+  // bucket
+  const mx=simData[simData.length-1];
+  const buckets=50;
+  const bw=mx/buckets;
+  const counts=new Array(buckets).fill(0);
+  simData.forEach(v=>{const b=Math.min(Math.floor(v/bw),buckets-1);counts[b]++});
+  const mc=Math.max(...counts);
+  counts.forEach((c,i)=>{
+    const b=document.createElement('div');
+    b.className='histo-bar';
+    const h=mc>0?(c/mc)*100:0;
+    b.style.height=h+'%';
+    const lo=Math.round(i*bw),hi=Math.round((i+1)*bw);
+    b.setAttribute('data-tip',`${lo}-${hi}ms: ${c}`);
+    // color
+    const p95idx=Math.floor(simData.length*.95);
+    const p99idx=Math.floor(simData.length*.99);
+    const mid=(lo+hi)/2;
+    if(mid>simData[p99idx]) b.style.background='var(--danger)';
+    else if(mid>simData[p95idx]) b.style.background='var(--warn)';
+    else if(mid>simData[Math.floor(simData.length*.5)]) b.style.background='var(--accent)';
+    else b.style.background='var(--green)';
+    el.appendChild(b);
+  });
+}
+function pct(arr,p){return arr[Math.floor(arr.length*p/100)]}
+function renderSimStats(){
+  const avg=(simData.reduce((a,b)=>a+b,0)/simData.length).toFixed(1);
+  const p50=pct(simData,50),p90=pct(simData,90),p95=pct(simData,95),p99=pct(simData,99);
+  const mx=simData[simData.length-1];
+  document.getElementById('simAvg').textContent=avg+' ms';
+  document.getElementById('simP50').textContent=p50+' ms';
+  document.getElementById('simP90').textContent=p90+' ms';
+  document.getElementById('simP95').textContent=p95+' ms';
+  document.getElementById('simP99').textContent=p99+' ms';
+  document.getElementById('simMax').textContent=mx+' ms';
+  document.getElementById('simCount').textContent=`${simData.length} samples generated`;
+
+  const ratio=(p99/p50).toFixed(1);
+  const tailSeverity=ratio>10?'severe':ratio>5?'significant':ratio>2?'moderate':'healthy';
+  const color=ratio>10?'var(--danger)':ratio>5?'var(--warn)':ratio>2?'var(--accent)':'var(--green)';
+  document.getElementById('simInsight').innerHTML=`
+    <p><strong style="color:#fff">Analysis:</strong></p>
+    <p>Average (${avg}ms) vs P50 (${p50}ms): ${avg>p50*1.3?'<strong style="color:var(--warn)">Average is misleading</strong> — pulled up by outliers.':'Average and median are close — distribution is relatively symmetric.'}</p>
+    <p>P99/P50 ratio: <strong style="color:${color}">${ratio}× (${tailSeverity} tail)</strong></p>
+    <p>P95 (${p95}ms) vs P99 (${p99}ms): ${p99>p95*2?'Large gap — a small % of requests are much slower than the rest.':'Close together — tail is relatively compact.'}</p>
+  `;
+}
+
+// ── FADE ──
+const fo=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){e.target.style.animationPlayState='running';fo.unobserve(e.target)}})},{threshold:.08});
+secs.forEach(s=>{s.style.animationPlayState='paused';fo.observe(s)});
+</script>
+</body>
+</html>
